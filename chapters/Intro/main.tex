@@ -1,0 +1,80 @@
+% mainfile: ../../report.tex
+% vim: spell spelllang=en
+
+\chapter{Introduction}
+\label{cha:intro}
+
+\epigraph{Cryptography is not the solution to your security problems. It might be part of the solution, or it might be part of the problem.}{N.\ Ferguson and B.\ Schneier}
+
+\fnnosym{The epigraph comes from Ferguson and Schneier's \emph{Practical Cryptography}~\cite{Ferguson:Schneier:PracC}, \ts 2.6.}
+
+\section{On Problems and Solutions}
+  \label{sec:prob_sol}
+  The attempt to achieve ``secret writing'' is probably as old as writing itself. And until the early 1970s and early 1980s, it was mostly an art form: one used intuition and \emph{ad hoc} reasoning, and little else. That would change radically from that point onwards: it became more scientific (and certainly more rigorous), although it still requires \emph{«a healthy dose of the black magic that we call experience»} (Ferguson and Schneier~\cite{Ferguson:Schneier:PracC}, p.\ 7).
+
+  Additionally, in the past the techniques for this kind of ``secret writing'', were themselves a closely guarded secret. While perhaps understandable, this led to an abundance of what is usually dubbed ``snake oil'': systems that might look like they were secure, while in reality being anything but. Eventually, the black magic of experience (in what regards to this particular point) was distilled into what is known as \textbf{Kerckhoff's principle}: when designing a cryptographic system, one must assume that all the details of the system are known to the cryptanalysts\emd all except the key(s), that is.\fn{Steve Bellovin notes that \textbf{the NSA itself} employs a somewhat similar mindset: \emph{«A former official at NSA's National Computer Security Center told me that the standard assumption there was that serial number 1 of any new device was delivered to the Kremlin.»}~\cite{Bellovin:NSA}.} This of course, does not mean that we must willing \emph{provide} all the details of the system to the wider world; only that when analysing security, we must not rely on the secrecy of anything, except the key.
+
+  However, at least in what concerns the development of cryptographic primitives and protocols, that is exactly what happens: all the details are published, which acts as an invitation to everyone else to try to attack that construction (it's a fun field\dots). If no practical attacks are found after an acceptable period of analysis (usually years), and if it is fast enough for the intended purpose, then it becomes a candidate for standardisation\emd which is a sort of first step to widespread adoption.
+
+  One of the results of this way of doing things, is that cryptography has become a huge field. The main goal of this course is precisely to help the student navigate and find his way amidst the myriad of different constructions\emd and acronyms!\emd that he will no doubt encounter in his future (technological) endeavours. And, equally important, to understand what cryptography \emph{cannot} provide. As Ferguson and Schneier explain:
+  %
+  \begin{quotation}
+    \noindent Too many engineers consider cryptography to be a sort of magic security dust that they can sprinkle over their hardware or software, and which will imbue those products with the mythical property of ``security''.\fn{See~\cite{Ferguson:Schneier:PracC}, p.\ xviii.}
+  \end{quotation}
+  %
+  By the end of the term, the student will hopefully be able to see why cryptography is just one component of a much larger and complex system. A system that ultimately, must include good old cunning human beings as well:
+  %
+  \begin{figure}[h!]
+    \centering
+    \includegraphics[scale=0.7]{chapters/Intro/xkcd-security}
+    \label{fig:xkcd_security}
+  \end{figure}
+
+% \section{On Probabilities\emd exact and otherwise}
+%   \label{sec:on_probabilities}
+%   tbd
+
+\section{On Models, Definitions, and Paranoia}
+  \label{sec:on_mdp}
+  Our definitions of security usually take the form of defining a task that a notional adversary, that is trying to attack our system, must \emph{not} be able to accomplish. Let $a$ and $b$ be two tasks, and assume that $a$ is \emph{easier} than $b$. Then it should be straightforward to see that (informally speaking):
+  %
+  \begin{center}
+    Being able to do the hard task ($b$) implies being able to do the easy task ($a$).
+  \end{center}
+  %
+  And conversely:
+  %
+  \begin{center}
+    Not being able to do the easy task ($a$) implies not being able to do the hard task ($b$).
+  \end{center}
+  %
+  Now think of security definitions. Intuitively, we would want to say that if a given construction verifies a strong notion of security, then it also verifies a weak(er) notion of security (although the converse will usually be false). Taking this into account, together with the two implications above, means the following: \textbf{the easier the task the adversary is assumed \textit{not} to be able to do, the stronger the corresponding security definition will be}.
+
+  In particular, the more said task borders on the trivial (or the more resources and computational power the adversary is assumed to have), the more the corresponding security definition approaches \emph{unconditional} security\emd in comparison to which all other security definitions will be weaker.
+
+  \medskip
+
+  \para{When designing cryptographic primitives,} one usually tries to design one that will be as secure as possible\emd in other words, the stronger the security definition that the primitive verifies, the better. However, when \textbf{designing} a protocol (say TLS), that uses a cryptographic primitive (say a block cipher), the protocol designer should be conservative, and assume that \textbf{the primitive he will be using is as \textit{weak} as possible}. In other words, he wants to be able to say: my protocol is so well designed, that it remains secure even when the underlying block cipher sucks.
+
+  \bigskip
+
+  \noindent The above discussion is very informal (probably to a fault\dots), but the reader is advised to keep it in mind when reading the plethora of definitions introduced hereinafter\emd and to come back and re-read this section whenever necessary.
+
+  \bigskip
+
+  \para{The paranoia model.} Another thing the reader would do well to keep in mind is the following: often when reading descriptions of attacks, it is tempting to think: ``but this would not be a problem in practice!'', or ``but this would never happen!''. However, history\emd recent history\emd has shown this to be a dangerous mindset indeed. Take the padding oracle attack (\ts\ref{sec:padding_oracle}): it involves sending a few modified encrypted packets during a TLS session. In most circumstances, this would be irrelevant, because when TLS receives the \emph{first} invalid packet, it shuts down the connection. However, it turned out that, when TLS is used with IMAP (an email retrieval protocol), there was a setting where the attack could work\emd and it allowed for \textbf{the user's password} to be recovered! This is why cryptographers are paranoid. If there is a theoretical chance something might fail, that is enough justification to go improve it.
+
+\section{On Keys\emd Secret, ``Big'', and Independent}
+  \label{sec:on_keys}
+  Kerckhoff's principle states that all the security resides in the key, so it must be kept \textbf{secret}. There is also the problem of which \textbf{size} of key should one choose. This varies so wildly with so many things that a single, one-size-fits-all (no pun intended) answer, is impossible. The following should, however, be kept in mind:
+  %
+  \begin{itemize}
+    \item Larger keys are \textbf{necessary} for improved security, but are \textbf{not sufficient}.
+    \item The larger the key, the slower the construction will be.
+    \item Key sizes cannot be compared across different constructions; particularly between symmetric and asymmetric constructions. By way of example, today it is considered prudent security to use a 256 bit key for AES, but for RSA the minimum recommended key length is 2048!!
+  \end{itemize}
+  %
+  And one last warning: when mixing different cryptographic constructions in the same scheme, \textbf{always use independent keys!!!} Things can go badly wrong otherwise\emd see the end of \ts 4.5.2 in~\cite{KatzLindell:IMC} for an illuminating example.
+
+% chapter Introduction (end)
+

@@ -1,0 +1,174 @@
+% mainfile: ../../report.tex
+% vim: spell spelllang=en
+
+\chapter{Hash Functions}
+\label{cha:hashfunctions}
+
+\section{Intuition}
+  \label{sec:hashfunc_intuition}
+  The intuition of hash functions is that they map inputs of arbitrary length ($\{0, 1\}^*$) to outputs of some fixed length $n$ ($\{0, 1\}^n$). This necessarily implies that collisions \emph{must} exist; in other words, it is impossible for such a function to be injective. (Note that any injective function is trivially collision resistant.) For cryptography, however, we have the additional requirement that collisions must be very hard to find.
+
+  We will see below what this means more precisely, but it is important to keep in mind that the requirements for cryptography are more stringent that in other settings where hash functions may be used. For example, in data structures, it may suffice to have an hash function for which it is very unlikely to find collisions by chance. In cryptography by contrast, we need collisions to be hard to find, even when one is specifically looking for them. This makes cryptographically secure hash functions much harder to design.
+
+\section{Definitions}
+  \label{sec:hashunc_definitions}
+  Although in practice cryptographically secure hash functions are unkeyed, for theoretical reasons they are modelled taking as input a key $s$, in addition to the message $m$ over which the hash is supposed to be computed. This value (the output of the hash function) is also called the \emph{digest} of message $m$. The reason for key $s$ is that without it, $H$ is just some fixed function, and there is always a constant time algorithm that outputs a collision\emd i.e.\ a pair $(x, x')$ such that $H(x) = H(x')$\emd namely an algorithm that simply has one such pair hard-coded. If the reader finds this somewhat pedantic, this author sympathises, but that is how it is. However, this does mean that there are important differences between keys for hash functions, and the keys used in symmetric primitives studied so far. First and foremost, the latter have to be \emph{secret}, while the former don't. For this reason, an hash function with key $s$ is denoted $H^s$ (instead of $H_s$, which was the usual notation for symmetric primitives). Secondly, for symmetric primitives any value of the key was valid; here however there may exist values of $s$ for which $H^s$ is not defined.
+
+  So even though we ignore the key in practice, we still define an hash function as a pair of algorithms:
+  %
+  \begin{definition}
+    \label{def:hashfunction}
+    An \emph{hash function} is a pair of PPT algorithms $(\myemph{Gen}, H)$, satisfying:
+    %
+    \begin{enumerate}
+      \item \myemph{Gen} is a probabilistic algorithm, which receives the security parameter $1^n$, and outputs a key $s$.
+      \item $H$ takes a string $x\in \{0, 1\}^*$ and outputs a string $H(x)\in \{0, 1\}^{l(n)}$, where $l(n)$ is some length value that depends on the security parameter $n$.
+    \end{enumerate}
+  \end{definition}
+
+  It is possible to have an hash function that instead of receiving inputs of arbitrary length, receives only inputs of a given fixed length. In this case, we care only about hash functions for which the input length is greater than the length of the digest $l(n)$\emd and when this is so, we say that the hash function is a \textbf{compression function}.\fn{If the number of possible inputs is smaller than the number of possible digests, then collision resistance is trivial to achieve (injectivity).}
+
+  We define security of the hash function $\Pi = (\myemph{Gen}, H)$ by defining, given an adversary $\mathcal{A}$ and the security parameter $n$, the following collision finding experiment.
+
+  \smallskip
+
+  \noindent \textbf{The collision-finding experiment} \sg{Hash-coll}{}{\mathcal{A}}{\Pi}:
+  %
+  \begin{enumerate}
+    \item Running $\myemph{Gen}(1^n)$ yields a key $s$.
+    \item $\mathcal{A}$ is given $s$ and outputs $x, x'$.
+    \item The output of the experiment is $1$ if and only if $x\neq x'$ and $H^s(x) = H^s(x')$. If this is so, we say that $\mathcal{A}$ has found a collision.
+  \end{enumerate}
+  %
+  The function $H$ is said to be \emph{collision resistant} if no efficient adversary has a meaningful probability of winning this game:
+  %
+  \begin{definition}
+    \label{def:hf_coll_resistance}
+    An hash function $\Pi = (\myemph{Gen}, H)$ is \emph{collision resistant} if for all PPT adversaries $\mathcal{A}$, there exists a negligible function $\myemph{negl}$ such that:
+    %
+    \begin{equation}
+      \textup{Prob}\left[\sg{Hash-coll}{}{A}{\Pi} (n) = 1\right] \le \myemph{negl}(n)
+    \end{equation}
+  \end{definition}
+
+  \bigskip
+
+  \noindent This is the strongest security property that an hash function can have; however for certain applications, weaker notions may suffice. In particular, we have the following two:
+  %
+  \begin{description}
+    \item[Second preimage resistance:] this means that given $x$, the adversary is not able to discover a different $x'$ such that $H^s(x) = H^s(x')$.
+    \item[(First) preimage resistance:] given a digest $y$, the adversary is not able to compute $x$ such that $H^s(x) = y$.\fn{Roughly, this means that $H$ is a \emph{one-way function}.}
+  \end{description}
+  %
+  Note that if an adversary can break preimage resistance, he can also break second preimage resistance. To see why, note that if he has an algorithm to, given $y$, compute an $x$ for which $H^s(x) = y$, then he can break second preimage resistance as follows: take the given $x$, and compute $y=H^s(x)$. Now give $y$ to the previous algorithm, which will output an $x'$ such that $y=H^s(x')$. As the domains of hash functions, even if finite, are very large, chances are that $x\neq x'$\emd and so second preimage resistance has been broken.
+
+  Similarly, it is possible to show that an adversary breaking second preimage resistance can break collision resistance (exercise). So we have the following chain of implications (but note that the converses are false!):
+  %
+  \begin{center}
+    Collision resistance $\rightarrow$ Second preimage resistance $\rightarrow$ Preimage resistance
+  \end{center}
+
+\section{Domain Extension: Merkle-Damgård}
+  \label{sec:merkle_damgard}
+  A construction that is extensively used in practice, is the \emph{Merkle-Damgård} construction. It works on any fixed-length compression function, by turning it into a variable length compression function. Say $h^s$ compresses its input from length $2n$ to length $n$. Then the transform yields a variable length hash function $H^s$ as follows (note that the key $s$ remains the same):
+  %
+  \begin{enumerate}
+    \item In input $x$, pad it with zeroes until you get a length that is multiple of $n$. Say this yields $B$ blocks. Define block $x_{B+1}$ to be equal to the bit representation of $L$, where $L$ is the original (unpadded) length of input $x$.
+    \item Set $Z_0 = 0^n$, and $Z_i = h^s(Z_{i-1}\|x_i)$. See figure~\ref{fig:merkle_damgard}.\fn{$Z_0$ can be any fixed, public value, although it is customarily set to the zero vector.}
+    \item Output $H^s(x) = Z_{B+1}$.
+  \end{enumerate}
+  %
+  The security of the construction follows from the fact that if a collision is found for $H^s$, then that allows us to discover a collision for $h^s$. And so, if $h^s$ is collision resistant, so will $H^s$. The intuition is easy to grasp.\fn{See Theorem 5.4 in (\cite{KatzLindell:IMC}, \ts 5.2) for a more detailed discussion.} Say you found a collision for $H^s$, i.e.\ $x$ and $x'$ such that $H^s(x) = H^s(x')$. Let $L$ and $L'$ be the lengths of $x$ and $x'$ respectively. Then we have two possibilities:
+  %
+  \begin{itemize}
+    \item $L\neq L'$. Then $Z_b\|L \neq Z_b\|L'$, and the last iteration of $h^s$ shows a collision for it.
+    \item $L=L'$. Then, given that $\abs{x} = \abs{x'}$ but $x\neq x'$, there must exist $i$ such that $Z_i\|x_{i+1} \neq Z_i\|x'_{i+1}$. The inputs to $h^s$ corresponding to the \emph{largest} such $i$ will yield a collision for $h^s$, as from that point onwards the values will be equal (otherwise we are not considering the \emph{largest} such $i$).
+  \end{itemize}
+
+  \begin{figure}
+    \centering
+    \includegraphics[scale=0.3]{chapters/HashFunctions/images/MerkleDamgard.png}
+    \caption{The Merkle-Damgård transform. Borrowed from Katz and Lindell~\cite{KatzLindell:IMC}, p.\ 158.}
+    \label{fig:merkle_damgard}
+  \end{figure}
+
+  \para{Extension attacks.} As the function $h^s$ is publicly known, an adversary can take the output $H^s(x)$, and compute $h^s(H^s(x)\|y)$, where $y$ is some value of the adversary's choosing. The next section shows a construction where this turned out to be a major problem.
+
+\section{HMAC}
+  \label{sec:hmac}
+  Before turning to HMAC proper, consider a MAC for variable length messages constructed in the following manner: given a collision-resistant hash function $H^s$, and a secure MAC $\myemph{Mac}$, to compute the tag of a message $m$, do $\myemph{Mac}_k(H^s(m))$. Intuitively, this should be secure, because the collision resistance of $H^s$ means that the digest $H^s(m)$ can, for practical purposes, be used as a replacement for $m$ that is ``as good as $m$''. I.e., it is infeasible to find another message $m'$ such that $H^s(m') = H^s(m)$. And indeed this construction, called \emph{hash-and-MAC}, is secure\emd see (\cite{KatzLindell:IMC}, \ts 5.3.1) for a formal proof.
+
+  The approach described above is not (directly) used in practice. Another construction, standardised as \textbf{HMAC}, is used instead. It was first used with hash functions constructed via the Merkle-Damgård construction (e.g.\ MD5 or SHA256), and it can be seen as an ``instantiation'' of the more general hash-and-MAC approach\emd thus can be used with hash function $H^s$.
+
+  Besides being standardised, and being \emph{fast}\emd one of the reasons why practitioners avoided CBCMAC was because it was ``slow''\emd it provides another benefit: it is secure even if the hash function used satisfies only a weaker form of collision resistance\emd creatively named \emph{weakly collision resistance}\emd where the adversary is still trying to find a collision, but now with the aid of an ``hash oracle'' that allows him to obtain hashes for values of his choice, but with the function \textbf{secretly keyed} with $k_{in}$.\fn{This description is a bit imprecise, but suffices for current purposes. For further details, see Definition 3.1 in Bellare, Canetti and Krawczyk~\cite{BCK:KeyingHash}.} This turned out to be of major importance in practice, because one of the first functions to be used with this construction was MD5 (denoted HMAC-MD5). When the first collision attacks were discovered for MD5, it could no longer be considered collision resistant. However, it still verified the condition of weakly collision resistance, which meant HMAC's security proof was still valid. This still meant existing systems should, in the interest of caution, start using a better construction than HMAC-MD5, but the change could be properly planned, as there was no need to rush.
+
+  \bigskip
+
+  \begin{figure}
+    \centering
+    \includegraphics[scale=0.4]{chapters/HashFunctions/images/HMAC.png}
+    \caption{The HMAC construction. Borrowed from Katz and Lindell~\cite{KatzLindell:IMC}, p.\ 162.}
+    \label{fig:hmac}
+  \end{figure}
+
+  \para{HMAC.} The construction is depicted in figure~\ref{fig:merkle_damgard}. For now, think of $k \oplus \myemph{ipad}$ and $k \oplus \myemph{opad}$ as independent keys $k_1$ and $k_2$\emd we will get back to them momentarily.\fn{Also cf.\ \ts\ref{sec:on_keys} for important remarks on the importance of independent keys.} To make sense of the diagram, ignore $k_{in}$ and $k_{out}$, and think of the top ``row'' as an application of the Merkle-Damgård construction to $k_1\|m$. The reason we cannot just use the top row as a MAC, i.e.\ given the secret key $k_1$, just compute Merkle-Damgård of $k_1\|m$, is because this is vulnerable to \emph{extension attacks}.\fn{Remember that for hash functions, $s$ is a key, but not a secret one\dots}. Indeed, consider a message $m$, the MAC of which is to be computed using key $k_1$ (assume both $m$ and $k_1$ have a bit length equal to half that of $h^s$). The tag $t$ would be (here I drop the $s$ superscript to ease the notational burden):
+  %
+  \begin{equation}
+    t = h\bigg\{2\|h\big[m\|h(k_1\|0^n)\big]\bigg\}
+  \end{equation}
+  %
+  The reader might want to draw the diagrams corresponding to the previous and following calculations. Then we can compute $t' = h(3\|t)$, and produce the forged message $m' = m\|2$, for which the tag will be:
+  %
+  \begin{equation}
+    h\bigg\{3\|h\Big\{2\|h\big[m\|h(k_1\|0^n)\big]\Big\}\bigg\} = h(3\|t) = t'
+  \end{equation}
+  %
+  The solution is to add another round of the Merkle-Damgård construction, but now using as inputs the output of the top row Merkle-Damgård round, and an independent key $k_2$\emd again, cf.\ figure~\ref{fig:merkle_damgard}, thinking of $k \oplus \myemph{opad}$ as $k_2$. This can be abstracted as:
+  %
+  \begin{equation}
+    H^s\big(k_2\| H^s(k_1\|m)\big)
+  \end{equation}
+  %
+  This is basically a strengthened version of the hash-and-MAC paradigm. This particular variant can be proven secure, if $k_1$ and $k_2$ are \emph{independent}. But as we discussed above, using two keys for MACs is frowned upon. So what is done is to generate just one key, and XOR it with two values $\myemph{ipad}$ and $\myemph{opad}$, fixed by the standard, and use those instead. Although now the keys are related\emd $k \oplus \myemph{ipad} \oplus k \oplus \myemph{opad}$ is always equal to the fixed value $\myemph{ipad} \oplus \myemph{opad}$, which would only happen with negligible probability if the keys were random\emd this new scheme can also be proved secure, albeit at the cost of imposing a stronger assumption on $h^s$\emd but this is out of the scope of the current course.\fn{For the curious: $h^s$ needs to be such that the top row remains secure\emd i.e.\ indistinguishable from a pseudorandom function\emd under what is called a \emph{related-key attack}. This can be shown to happen if $h^s$ is a \emph{Davies-Meyer} compression function (\cite{KatzLindell:IMC}, \ts 6.3.1)\emd which is what is used in for Merkle-Damgård constructions in practice.}
+
+\section{Birthday Attacks}
+  \label{sec:birthday_attacks}
+  Consider the following problem: how many classmates do you need to have, for there to be a $50\%$ chance of two of you sharing a birthday? This depends on the distribution of birthdays throughout the year, but for current purposes it suffices to assume a uniform distribution. Under this assumption, the answer might be surprising: on average, it suffices to have 23 students. This seems surprising because as there are at least 365 days in a year, one would intuitively suppose that with 23 students, the odds of a collision would be quite low. Which is not what happens, and this is why this result is sometimes nicknamed the ``birthday paradox''\emd even though, strictly speaking, there is no paradox whatsoever here. A rigorous calculation is cumbersome\emd see \ts 5.4.1 and \ts A.4 in~\cite{KatzLindell:IMC}\emd but rounding 365 to 400, one notices that 23 is close to the square root of 400 (which is 20). And indeed, this is the intended take away of this discussion: for a set with $n$ element, one needs on average $\sqrt{n}$ attempts to find a collision.
+
+  Why is this relevant to hash functions? Well, say you have an hash function $H$ that produces an $n$-bit digest. Under a similar assumption as above, model $H$ as a ``random oracle'', that is, assume that on a new input, $H$ simply chooses a random element of the $2^n$ possible digests, according to a uniform distribution (but if queried on element for which a digest was previously chosen, then $H$ outputs that same digest again). On average, the same reasoning applied above would entail that you need to evaluate $H$ on $\sqrt{2^n} = 2^{n/2}$ inputs, before you can expect to find a collision. Notice that by the pigeonhole principle, after evaluating $H$ on $2^n+1$ different inputs, you find a collision with probability $1$. The birthday bound significantly improves that result, with a probability that, while lower than $1$, is still high enough to be realistic.
+
+  To get a feeling for this result, it might be instructive to compare it to the problem of inverting $H$ on a specific output. I.e.\ say we have a digest $y$, and we are trying to find $x$ such that $H(x) = y$. With one attempt, our probability of success is $1/2^{n}$. If we make another attempt, it succeeds with probability $1/(2^n-1)$, but this second attempt only takes place if the first failed, which happens with probability $(2^n-1)/2^n$. Hence the probability of succeeding after two attempts is:
+  %
+  \begin{equation}
+    \frac{1}{2^n} + \frac{2^n-1}{2^n}\frac{1}{2^n-1} = \frac{2}{2^{n}}
+  \end{equation}
+  %
+  And so, after $N$ attempts the probability of success is:
+  %
+  \begin{equation}
+    \frac{1}{2^n} + \prod_{i=2}^N\left(\frac{2^n-i}{2^n}\frac{1}{2^n-i}\right) = \frac{1}{2^n} + (N-1) \frac{1}{2^n} = \frac{N}{2^{n}}
+  \end{equation}
+  %
+  Thus, to obtain a success probability of $50\%$ in inverting $H$, we need $N = 2^n/2 = 2^{n-1}$ attempts. The reader should easily recognise that $2^{n-1} \gg 2^{n/2}$\emd in fact, this difference grows exponentially in $n$.\fn{This result also applies to other scenarios, e.g.\ brute force search: for a key of size $n$, the probability of finding a key after $N$ attempts is $N/2^n$.} This is why inverting $H$ (i.e.\ breaking pre-image resistance) is much harder than collision finding (breaking collision resistance)\emd and why the birthday bound should be known and understood by cryptography practitioners.\fn{As explained in \ts\ref{sec:on_mdp}, this implies that the security notion defined by the infeasibility of finding collisions is much \emph{stronger} than the one defined by the infeasibility of finding a pre-image.}
+
+
+\section{Password Hashing and Key Derivation}
+  \label{sec:pwdhash_pbkdf}
+  The symmetric primitives we have seen all require keys that are generated \emph{uniformly}. However, it is often more expedient for communicating parties to rely on some shared secret that will \emph{not} be uniformly distributed. Just think of good old \emph{passwords}: if they are directly used as a key, then the only keys that are used are those whose bits correspond to printable characters! This will be only a fraction of the entire keyspace\emd not what we want! To borrow from Katz and Lindell (\cite{KatzLindell:IMC}, \ts 5.6.4):
+  %
+  \begin{quotation}
+    \noindent In fact, the ASCII representations of the letters A–Z lie between 0x41 and 0x5A; in particular, the first 3 bits of every byte are always 010. This means that \emph{37.5\% of the bits of the resulting key will be fixed}, and the 128-bit key the parties derive will have only about 75 bits of entropy (i.e., there are only $2^{75}$ or so possibilities for the key).
+  \end{quotation}
+
+  The alternative is to use \emph{key derivation functions}.\fn{Cf.\ \texttt{cryptography}'s documentation: Hazmat > Primitives > Key Derivation Functions.} The reason hash functions play a role here, is that intuitively, they are very uncertain: it is very hard, looking at the input, to be able to guess anything about the tag. Technically, one says that the distribution of the digests has very high \emph{entropy}\emd and in fact, the distribution with highest entropy is precisely the uniform distribution. But we do not this level of detail here; suffice to say that this uncertainty about what the digest of a given input will be means that we can use hash functions to take, say, passwords, and produce keys that more well-spread across the key space.
+
+  \medskip
+
+  \para{Password storage.} It should be clear to anyone with even a modicum of background in computer or software engineering why storing passwords in the clear is a spectacularly dumb idea: should the database even be stolen, or leaked, even if partially, then the passwords can immediately be put to use; one just needs to read them. Worse, users may very well \emph{reuse} their passwords, say across different sites. So a better strategy is required.
+
+  And a pretty simple one comes mind: instead of storing the plain password, run it through an hash function, and store the respective digest. And this is indeed a significant improvement, but it suffers from a significant problem. Namely the fact that users might use some easily guessable strings as passwords: the spouse's name, the dog's name, their favourite sports club, and so on. An attacker can \emph{pre-compute} hashes for these easily guessable values, and he can do so months in advance. When and if he retrieves a password database, he just has to compare the values therein with the values he precomputed.
+
+  Hence we need a better strategy. One idea to use \emph{slow hashing}, i.e.\ to deliberately make the password checking process slower. For example, by iterating the hash function several times (instead of using it just once). This will be barely noticeable by legitimate users, but might mean that months of pre-computation work now turn into years. Another approach is to use \emph{salts}: we choose a random salt $s$ for each user, and then in the password database store the pair $s, H(s\|password)$. This means that when the attacker gets the database, he will the value of $s$, but will have to compute the hashes database only \emph{after} he obtained the password database\emd and do so once for each user. This is adds a  significant overhead to the attacker's work\emd and thus it is a widely used strategy to the attacker's work\emd and thus it is a widely used strategy.
+
+% chapter Hash Functions (end)
+

@@ -1,0 +1,346 @@
+% mainfile: ../../report.tex
+% vim: spell spelllang=en
+
+\chapter{Symmetric Ciphers}
+\epigraph{The fundamental task of cryptography is \emph{encryption}.}{S.\ Arora and B.\ Barak}
+
+\fnnosym{The epigraph comes from Arora and Barak's \emph{Computational Complexity}~\cite{AroraBarak:CompComplex}, \ts 9.}
+
+\section{Perfect Secrecy}
+  \label{sec:perf_sec}
+  Believe it or not, there is such a thing as perfectly secret symmetric cipher. In the following sense: the cryptogram $c$ of message $m$ under key $k$ yields \emph{no information} whatsoever about $m$. But what does it mean for $c$ to yield ``no information'' about $m$? Well, consider the space of all possible plaintext messages $\mathcal{M}$. The adversary, who is trying to discover something about $m$, by analysing $c$, might know nothing at all about the probabilities of the different messages in $\mathcal{M}$, but more often than not, he will know something about them\emd for example, he might know that $m$ is a message written in English, rather than just random data. Saying that $c$ yields no information about $m$ means that after seeing $c$, the probability distribution of $\mathcal{M}$ that he is able to compute is exactly the same as the one he could compute \emph{without} having seen $c$. In other words, seeing the cryptogram does not help at all to narrow down the scope of possible plaintext messages.
+
+  \medskip
+
+  \noindent More formally, consider an encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$, with message space $\mathcal{M}$, ciphertext space $\mathcal{C}$, and key space $\mathcal{K}$. Let $M$ be a random variable that corresponds to the plaintext message, and $C$ a random variable that corresponds to the ciphertext obtained. We have the following definition:
+  %
+  \begin{definition}
+    \label{def:perf_sec}
+    An encryption scheme $\Pi$ is \myemph{perfectly secret} if for every probability distribution over its message space $\mathcal{M}$, for every message $m$ in its message space, and for every cryptogram $c$ on its ciphertext space such that $Prob[C=c] > 0$, the following holds:\fn{This corresponds to Definition 2.3 given in (\cite{KatzLindell:IMC}, p.\ 29.)}
+    %
+    \begin{equation}
+      \textup{Prob}[M = m\ |\ C =c] = \textup{Prob}[M = m]
+    \end{equation}
+  \end{definition}
+  %
+  \noindent Having the probability of $c$ greater than $0$ is a technicality to avoid conditioning over an event with $0$ probability.
+
+  Using Bayes' Theorem, we can give an alternative definition of perfect secrecy:
+  %
+  \begin{theorem}
+    \label{thm:perf_sec}
+    An encryption scheme $\Pi$ is \myemph{perfectly secret} if for every probability distribution over its message space $\mathcal{M}$, for every $m, m'\in \mathcal{M}$, and every $c\in \mathcal{C}$, the following holds:\fn{This corresponds to Lemma 2.4 given in (\cite{KatzLindell:IMC}, p.\ 30.)}
+    %
+    \begin{equation}
+      \textup{Prob}[\sgg{Enc}_K(m) = c] = \textup{Prob}[\sgg{Enc}_K(m') = c]
+    \end{equation}
+  \end{theorem}
+  %
+  \noindent Informally this means that regardless of the plaintext message we encipher, we always obtain the same distribution for the ciphertext space. To give a more concrete example, if encrypting message $m$ gave the uniform distribution on $\mathcal{C}$, then that would mean that when encrypting \emph{any other message}, all the ciphertexts in $\mathcal{C}$ would be equi-probable.
+  
+  \bigskip
+
+  \para{The Vernam cipher (OTP), and the limitations of perfect secrecy.} There is actually a dead simple construction that yields perfect secrecy: the \textbf{One-Time Pad}, that Vernam thought up circa 1917. For simplicity, assume that both $\mathcal{M}$ and $\mathcal{C}$ consist of the 26 letters \texttt{A-Z}. Enciphering is as simple as, for each letter of the plaintext, choose another letter randomly, add two modulo 26, and the result is the corresponding letter of the ciphertext. Repeat the process until there are no more letters in the message. Those randomly chosen letters are the secret key. To decrypt, just subtract (mod 26) the key from the ciphertext.
+
+  Sounds simple enough, but the problem is that the key must be generated from a ``true'' random source\emd meaning, basically, that pseudorandom generators (\ts\ref{sec:prng}) \emph{cannot} be used. This also implies that the length of the key must be at least that of the plaintext message\emd or equivalently, the key space must be at least as large as the message space: $\abs{\mathcal{K}} \ge \abs{\mathcal{M}}$. This, it turns out, is not a limitation of the OTP, but rather a necessary\emd though \textbf{not sufficient}\emd condition for perfect secrecy.
+
+  To see why, consider an encryption scheme where $\abs{\mathcal{K}} < \abs{\mathcal{M}}$, and the following attack strategy: given a ciphertext $c$, we just decrypt $c$ using every possible key. As the cardinality of the key space is less than that of the plaintext message space, the result will be a \emph{subset} of $\mathcal{M}$\emd denote it $\mathcal{S}$. This immediately allows the following modification on the probability distribution of $\mathcal{M}$: all the messages in $\mathcal{M}\setminus \mathcal{S}$ can now be assigned probability $0$. For the only messages for which there is a key that encrypts them to $c$ are those in $\mathcal{S}$. And so having $\abs{\mathcal{K}} < \abs{\mathcal{M}}$ means that perfect secrecy is not attainable.
+
+\section{Security Definitions}
+  \label{sec:secdefs}
+  We begin with the simplest definition: security against a passive attacker (eavesdropper), who sees only one ciphertext (for a given key). This is called \textbf{EAV-security}, and is defined by the following security game (denoted \privkeav):
+  %
+  \begin{enumerate}
+    \item Run $\myemph{Gen}(1^n)$ to generate a key $k$.
+    \item Adversary $\mathcal{A}(1^n)$ chooses two messages of equal length, $m_0$ and $m_1$.
+    \item We choose a uniform random bit $b \leftarrow \{0, 1\}$, and then encrypt $m_b$, obtaining ciphertext $c \leftarrow Enc_k(m_b)$. $c$ is given to $\mathcal{A}$. ($c$ is called the \emph{challenge ciphertext}.)
+    \item $\mathcal{A}$ outputs a bit $b'$. This is $\mathcal{A}$'s guess of the value of bit $b$.
+    \item If $\mathcal{A}$ guessed correctly (i.e.\ if $b' = b$), we say it \emph{succeeded}. In that case, $\privkeav = 1$; otherwise $\privkeav = 0$. 
+  \end{enumerate}
+  %
+  The intuition is that the better the cipher, the harder it will be for the adversary to extract any information from the ciphertext, \emph{regardless of what the corresponding plaintext message happened to be}. This is why we allow for the adversary itself to choose the plaintext messages. In the above game, if the adversary simply \emph{guesses} a value for $b'$, he will be correct with probability $1/2$. This happens if the cipher has perfect security; for concrete security, we are happy if the adversary is only able to do negligibly better than this.
+  %
+  \begin{definition}
+    \label{def:perfectly_indistinguishable}
+    A private key encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$ is \emph{perfectly indistinguishable} if for all adversaries $\mathcal{A}$, \emph{including non-efficient ones}, it holds that:\fn{This corresponds to Definition 2.5 given in (\cite{KatzLindell:IMC}, p.\ 31).}
+    %
+    \begin{equation}
+      \textup{Prob}\left[\privkeav (n) = 1\right] = \frac{1}{2}
+    \end{equation}
+    %
+    The probability is taken over the randomness used by $\mathcal{A}$, together with whatever randomness is used in the experiment ($\Pi$ plus choosing the bit $b$).
+  \end{definition}
+  %
+  \noindent This is equivalent to perfect secrecy (\cite{KatzLindell:IMC}, Lemma 2.6, p.\ 31). In practice, however, we give up perfect secrecy and non-efficient adversaries. We focus instead in \emph{concrete security}, meaning constructions are indexed by a security parameter $n$, and efficient adversaries, meaning adversaries that run in \emph{probabilistic polynomial time} (PPT). ``Probabilistic'' means the algorithm can ``toss coins'', i.e.\ make random choices.
+
+  The following definition is the concrete security equivalent of perfect secrecy:
+  %
+  \begin{definition}
+    \label{def:eav_secure}
+    A private key encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$ is \emph{EAV-secure} if for all PPT adversaries $\mathcal{A}$, there is a negligible function $\myemph{negl}$ such that, for all $n$:\fn{This corresponds to Definition 3.8 given in (\cite{KatzLindell:IMC}, p.\ 55).}
+    %
+    \begin{equation}
+      \textup{Prob}\left[\privkeav (n) = 1\right] \le \frac{1}{2} + \myemph{negl}(n)
+    \end{equation}
+    %
+    The probability is taken over the randomness used by $\mathcal{A}$, together with whatever randomness is used in the experiment ($\Pi$ plus choosing the bit $b$).
+  \end{definition}
+
+  \noindent The next step is to consider what happens if the adversary sees more than one ciphertext (for a given key). Think of a \emph{deterministic} cipher, i.e.\ one where once fixed a key, encrypting the same plaintext always produces the same ciphertext (e.g.\ the OTP): if the adversary is observing the encrypted traffic, and all of a sudden sees a ciphertext that he has seen already, then he will know that there was a message that was sent twice. This violates the above intuition of the adversary not being able to extract any information from all the ciphertext he sees, and hence this scenario requires a stronger security definition.
+
+  That stronger notion is \textbf{MULT-security}, which corresponds to the following security game (denoted $\sg{PrivK}{mult}{A}{\Pi}$):
+  %
+  \begin{enumerate}
+    \item Run $\myemph{Gen}(1^n)$ to generate a key $k$.
+    \item Adversary $\mathcal{A}(1^n)$ chooses two \emph{vectors} of messages, $\bm{M_0} = (m_{0, 1}\dots, m_{1, t})$ and $\bm{M_1} = (m_{1, 1}, \dots, m_{1, t})$, having $\abs{m_{0, i}} = \abs{m_{1, i}}$, for all $1\le i\le t$.
+    \item We choose a uniform random bit $b \leftarrow \{0, 1\}$, and then encrypt $\bm{M}_b$, obtaining ciphertext vector $C = (c_1, \dots, c_t)$, where $c_i \leftarrow Enc_k(m_{b, i})$. $C$ is given to $\mathcal{A}$.
+    \item $\mathcal{A}$ outputs a bit $b'$. This is $\mathcal{A}$'s guess of the value of bit $b$.
+    \item If $\mathcal{A}$ guessed correctly (i.e.\ if $b' = b$), we say it \emph{succeeded}. In that case, $\sg{PrivK}{mult}{A}{\Pi} = 1$; otherwise $\sg{PrivK}{mult}{A}{\Pi} = 0$. 
+  \end{enumerate}
+  %
+  The security condition is similar to definition~\ref{def:eav_secure}, \emph{mutatis mutandis}:
+  %
+  \begin{definition}
+    \label{def:mult_secure}
+    A private key encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$ is \emph{MULT-secure} if for all PPT adversaries $\mathcal{A}$, there is a negligible function $\myemph{negl}$ such that, for all $n$:\fn{This corresponds to Definition 3.19 given in~(\cite{KatzLindell:IMC}, p.\ 71).}
+    %
+    \begin{equation}
+      \textup{Prob}\left[\sg{PrivK}{mult}{A}{\Pi} (n) = 1\right] \le \frac{1}{2} + \myemph{negl}(n)
+    \end{equation}
+    %
+    The probability is taken over the randomness used by $\mathcal{A}$, together with whatever randomness is used in the experiment ($\Pi$ plus choosing the bit $b$).
+  \end{definition}
+
+  Note that MULT-security includes, as a special case, EAV-security: indeed one just has to use vectors of size one (i.e.\ set $t=1$).\fn{This also entails that if a scheme is not EAV-secure, it cannot possibly be MULT-secure.} But even this more strict definition of security for encryption schemes (confidentiality), does not suffice for all situations. Indeed, the adversary can come into possession of pair(s) (plaintext, ciphertext)\emd in which case it becomes trivial to win the EAV-security game with probability $1$ (why?). This is a known-plaintext attack, and we can consider this as a special case of the scenario where the adversary can \emph{choose} the plaintext messages that get encrypted (and which ciphertext he subsequently obtains; this is a chosen plaintext attack).\fn{Both of these are realistic scenarios; see Katz and Lindell~\cite{KatzLindell:IMC}, esp.\ chaps.\ 1--3.}
+
+  Modelling a known plaintext attack simply means the adversary has access to some fixed information (the (plaintext, ciphertext) pairs). The fact that he can choose what plaintexts he wants encrypted is modelled giving him access to an \emph{encryption oracle} $\myemph{Enc}_k (\cdot)$. Intuitively, the generalisation of MULT-security means that we now again deal with lists of messages, but to aid him in his task, the adversary can now request the encryption of plaintexts of his choice. In fact, we will now make the adversary even stronger, by allowing him to \emph{adapt} his future queries, based on the result of past queries. That is, instead of the adversary only being allowed to give a list of plaintexts, and request the corresponding ciphertexts, he can now ask for the encryption of a given plaintext, and analyse that ciphertext, before deciding what plaintext he will ask to be encrypted next.
+
+  Such a capability is modelled with a \textbf{left-right oracle}, denoted $\myemph{LR}_{k, b}$, that given two messages $m_0$ and $m_1$, outputs $\myemph{Enc}_k(m_b)$. Thus we emulate the MULT-security experiment with the queries $\myemph{LR}_{k, b} (m_{0, 1}, m_{1, 1}), \dots, \myemph{LR}_{k, b} (m_{0, t}, m_{1, t})$, which yield the ciphertexts $\myemph{Enc}_k(m_{b, i})$, for $1\le i\le t$. (But note that after receiving, say, $\myemph{Enc}_k(m_{b, 1})$, the adversary can decide on the next message that gets encrypted\emd i.e.\ it is adaptative.) We now have the following security experiment (denoted \sg{PrivK}{LR-cpa}{A}{\Pi}):
+  %
+  \begin{enumerate}
+    \item Run $\myemph{Gen}(1^n)$ to generate a key $k$.
+    \item Choose a bit $b \leftarrow \{0, 1\}$.
+    \item Give the adversary $\mathcal{A}(1^n)$ access to oracle $\myemph{LR}_{k, b}(\cdot, \cdot)$, defined as above.
+    \item $\mathcal{A}$ outputs bit $b'$.
+    \item If $b' = b$, we say that $A$ has \emph{succeeded}. In that case, $\sg{PrivK}{LR-cpa}{A}{\Pi} = 1$. Otherwise $\sg{PrivK}{LR-cpa}{A}{\Pi} = 0$.
+  \end{enumerate}
+  %
+  And the by now customary security definition:
+  %
+  \begin{definition}
+    \label{def:lrcpa_secure}
+    A private key encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$ is \emph{CPA-secure for multiple encryptions} if for all PPT adversaries $\mathcal{A}$, there is a negligible function $\myemph{negl}$ such that, for all $n$:\fn{This corresponds to Definition 3.23 given in (\cite{KatzLindell:IMC}, p.\ 76).}
+    %
+    \begin{equation}
+      \textup{Prob}\left[\sg{PrivK}{LR-cpa}{A}{\Pi}(n) = 1\right] \le \frac{1}{2} + \myemph{negl}(n)
+    \end{equation}
+    %
+    The probability is taken over the randomness used by $\mathcal{A}$, together with whatever randomness is used in the experiment ($\Pi$ plus choosing the bit $b$).
+  \end{definition}
+
+  \noindent We say CPA-secure \emph{for multiple encryptions} because the adversary can, in the game above, obtain an arbitrary number of ciphertexts. But we can also consider a simplified scenario, of CPA-security for a single encryption. This is what we do in the following experiment (denoted \sg{PrivK}{cpa}{A}{\Pi}):
+  %
+  \begin{enumerate}
+    \item Run $\myemph{Gen}(1^n)$ to generate a key $k$.
+    \item Give adversary $\mathcal{A}(1^n)$ access to the encryption oracle $\myemph{Enc}_k(\cdot)$.\fn{Note that this is \textbf{not} the left-right oracle of the previous game, but a simpler one that takes one plaintext and returns its corresponding encryption under key $k$.} $\mathcal{A}$ outputs $m_0$ and $m_1$ of the same length.
+    \item Choose a uniform bit $b \leftarrow \{0, 1\}$, and then compute $c \leftarrow \myemph{Enc}_k(m_b)$. Give $c$ to $\mathcal{A}$.
+    \item $\mathcal{A}$ continues to have access to $\myemph{Enc}_k(\cdot)$, and outputs a bit $b'$.
+    \item If $b' = b$, we say that $A$ has \emph{succeeded}. In that case, $\sg{PrivK}{cpa}{A}{\Pi} = 1$. Otherwise $\sg{PrivK}{cpa}{A}{\Pi} = 0$.
+  \end{enumerate}
+  %
+  Note that here the adversary only sees one ciphertext. It is straightforward to modify the above definition to this new scenario:
+  %
+  \begin{definition}
+    \label{def:cpa_secure}
+    A private key encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$ is \emph{CPA-secure for a single encryption} if for all PPT adversaries $\mathcal{A}$, there is a negligible function $\myemph{negl}$ such that, for all $n$:\fn{This corresponds to Definition 3.22 given in (\cite{KatzLindell:IMC}, p.\ 75).}
+    %
+    \begin{equation}
+      \textup{Prob}\left[\sg{PrivK}{cpa}{A}{\Pi}(n) = 1\right] \le \frac{1}{2} + \myemph{negl}(n)
+    \end{equation}
+    %
+    The probability is taken over the randomness used by $\mathcal{A}$, together with whatever randomness is used in the experiment ($\Pi$ plus choosing the bit $b$).
+  \end{definition}
+  %
+  \noindent If a given encryption scheme if CPA-secure for multiple encryptions, then it is clear that it is also CPA-secure for a single encryption. But surprisingly, \textbf{the converse also holds!} The following is a direct quote of Theorem 3.24 (\cite{KatzLindell:IMC}, p.\ 76):
+  %
+  \begin{theorem}
+    \label{thm:cpa_single_mult}
+    Any private-key encryption scheme that is CPA-secure is also CPA-secure for \emph{multiple} encryptions.\fn{This corresponds to Theorem 3.24 given in (\cite{KatzLindell:IMC}, p.\ 76). See therein for a reference to a proof.}
+  \end{theorem}
+  %
+  \noindent This is why we can speak just of CPA-security, without any ambiguity. This also simplifies proofs: if one can prove a scheme CPA-secure for a single encryption, then CPA-security for multiple encryptions comes ``for free''\emd i.e.\ without additional work.
+
+  \bigskip
+
+  \para{Chosen Ciphertext Security (CCA-security).} The final capability to handed to the adversary, is to allow him to \emph{decrypt} ciphertexts of his choice. With one obvious exception: he is not allowed to request the decryption of the challenge ciphertext\emd otherwise he could always win the security game with probability $1$. Now the reader may wonder: is this realistic? After all, it is hard to imagine an honest party happily deciphering ciphertexts at the adversary's behest. Nevertheless, such things do happen, and we will see an example of this with the padding oracle attack (\ts\ref{sec:padding_oracle}).
+
+  \medskip
+
+  \noindent \textbf{The CCA security experiment:} \sg{PrivK}{cca}{A}{\Pi}).
+  %
+  \begin{enumerate}
+    \item Run $\myemph{Gen}(1^n)$ to generate a key $k$.
+    \item Give adversary $\mathcal{A}(1^n)$ access to the encryption oracle $\myemph{Enc}_k(\cdot)$ and a decryption oracle $\myemph{Dec}_k(\cdot)$. $\mathcal{A}$ outputs $m_0$ and $m_1$ of the same length.
+    \item Choose a uniform bit $b \leftarrow \{0, 1\}$, and then compute $c \leftarrow \myemph{Enc}_k(m_b)$. Give $c$ to $\mathcal{A}$.
+    \item $\mathcal{A}$ continues to have access to $\myemph{Enc}_k(\cdot)$ and $\myemph{Dec}_k(\cdot)$, but is not allowed to query the latter on $c$. Eventually $\mathcal{A}$ outputs a bit $b'$.
+    \item If $b' = b$, we say that $A$ has \emph{succeeded}. In that case, $\sg{PrivK}{cca}{A}{\Pi} = 1$. Otherwise $\sg{PrivK}{cca}{A}{\Pi} = 0$.
+  \end{enumerate}
+  %
+  Note that here the adversary only sees one ciphertext. It is straightforward to modify the above definition to this new scenario:
+  %
+  \begin{definition}
+    \label{def:cca_secure}
+    A private key encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$ is \emph{CCA-secure} if for all PPT adversaries $\mathcal{A}$, there is a negligible function $\myemph{negl}$ such that, for all $n$:\fn{This corresponds to Definition 3.33 given in (\cite{KatzLindell:IMC}, p.\ 96).}
+    %
+    \begin{equation}
+      \textup{Prob}\left[\sg{PrivK}{cca}{A}{\Pi}(n) = 1\right] \le \frac{1}{2} + \myemph{negl}(n)
+    \end{equation}
+    %
+    The probability is taken over the randomness used by $\mathcal{A}$, together with whatever randomness is used in the experiment ($\Pi$ plus choosing the bit $b$).
+  \end{definition}
+  %
+  \noindent There exists an analog of theorem~\ref{thm:cpa_single_mult} for CCA-security, namely that CCA-security for a single encryption implies CCA-security for multiple encryptions. Which is why the definition only speaks of ``CCA-security''.
+
+  Constructing schemes that verify this very strong notion of security requires a primitive that is the topic of chapter~\ref{cha:MAC}: message authentication codes. Hence, further discussion takes place therein.
+
+\section{Block Ciphers}
+  \label{sec:block_ciphers}
+  Symmetric ciphers can process their input (the plaintext message to enciphered) either bit by bit, or blocks of bits at a time. The former case requires PRNGs (\ts\ref{sec:prng}), which is why it is discussed afterwords\emd and in this section, we consider only the latter case.
+
+  In practice most block ciphers map some number $n$ of bits to the same number of bits, which can be modelled as a \emph{pseudorandom permutation} (PRP). Recall that a permutation of a set $X$ is a re-arranging of that set's elements. Or in other words, a permutation of a set $X$ is a function $\funcdecl{f}{X}{X}$ that is a bijection (both injective and surjective). So what does it mean to say that $f$ is pseudorandom? For concreteness, say $X$ is the set of all bitstrings of length $n$\emd and thus, it has $2^n$ elements. How many permutations are there from $X$ to $X$? Well, for the first element of $X$, there are $2^n$ elements to take its place, for the second element of $X$, there $2^n-1$, and so on, until we reach the $2^n$-th element of $X$, for which there is one remaining choice. Hence there are $2^{n}!$ ways to permute the set $X$. Denote this set of permutations $\sgg{Perm}_n$ (and note that $\abs{\sgg{Perm}_n} = 2^n! \gg 2^n$). Now consider the following two probability distributions over $\sgg{Perm}_n$: on the one hand, we have the uniform distribution, that chooses at random one permutation from $\sgg{Perm}_n$; on the other, we consider a \emph{subset} of $\sgg{Perm}_n$, indexed by a set $K$, such that $\abs{\sgg{Perm}_n} \gg \abs{K}$, and an algorithm that chooses a permutation from that subset, according to some probability distribution. Note that this latter case is also a distribution on $\sgg{Perm}_n$, albeit one where the permutations not belonging to the subset are assigned probability zero. We say that the second distribution is a \textbf{pseudorandom permutation} if no efficient distinguisher can, well, \emph{distinguish} one distribution from the other.
+  We shall be making these notions both more precise and more general in a moment, but for now note that the second case corresponds to the intuition of a block cipher. To see why, consider a \emph{keyed pseudorandom permutation}: $\funcdecl{F}{K\times X}{X}$, where if we fix a key, say $k$, then we obtain one of the permutations in the subset above: $\funcdecl{F_k}{X}{X}$. Which is precisely what we want from a block cipher: that once a key is chosen, it behaves \emph{as if} it was a permutation chosen uniformly at random from $\sgg{Perm}_n$\emd although in practice it cannot be.\fn{Can you see why?}
+
+  \begin{remark}[Pseudorandomness of distributions]
+    \label{rem:pseudorandom_dist}
+    As the above discussion makes clear, the notion of pseudorandomness applies to \emph{distributions}\emd not concrete objects, such as permutations or functions (see below). However, here we will follow a longstanding convention that allows us to abuse the language and speak of pseudorandom permutations or functions.
+  \end{remark}
+
+  \bigskip
+
+  \noindent Towards a more formal definition, first note that we do not need to confine our discussion to \emph{permutations}, rather we can consider the more general case of (pseudorandom) \emph{functions} (PRF)\emd the difference being that unlike a permutation, a function need not be a correspondence between the same set, and need not be injective and surjective, or equivalently, a function does not have to be invertible. Now the reader might wonder what is the point of a non-invertible block cipher\emd and while such a doubt is certainly legitimate, the notion of a PRF turns out to be quite useful. And even non-invertible blockciphers can be put to good use\emd cf.\ the \emph{countermode} mode of operation (\ts\ref{sec:ctr_mode}).
+
+  So let $X$ and $Y$ be (finite) sets, and consider a function $\funcdecl{f}{X}{Y}$; how many such functions are there? Well, for each $x\in X$, there are $\abs{Y}$ choices, and there are $\abs{X}$ elements in $X$, which yields a grand total of $\abs{Y}^{\abs{X}}$. If $X$ is the set of $n$-length bitstrings, and $Y$ is the same but for length $m$, then the total number of functions is $(2^m)^{2^n} = 2^{m2^n}$. Denote this set by $\sgg{Func}_{n, m}$. The intuition is similar to the above case: we consider keyed functions, $\funcdecl{F}{K\times X}{Y}$, obtaining a subset of the functions in $\sgg{Func}_{n, m}$, namely $\funcdecl{F_k}{X}{Y}$. And we say that $F_k$ is a pseudorandom function if an efficient adversary cannot distinguish the ``behaviour'' of $F_k$ from that of a function $f$ chosen at random from $\sgg{Func}_{n, m}$.
+
+  Let $D$ be an algorithm that purports to distinguish $F_k$ from $f$. He is given access to an oracle, of either $F_k$ or $f$\emd denoted respectively as $D^{F_k(\cdot)}$ and $D^{f(\cdot)}$. Suppose, without loss of generality, that $D$ outputs $1$ if he ``thinks'' that he is interacting with $D^{F_k(\cdot)}$, and $0$ otherwise (i.e., $D^{f(\cdot)}$).\fn{Why is there no loss of generality here? I.e.\ why could we assign $1$ and $0$ in reverse?} Then we have the following definition:
+  %
+  \begin{definition}
+    \label{def:prf}
+    Let $\funcdecl{F}{K\times X}{Y}$ be an efficient keyed function. $F$ is a \myemph{pseudorandom} \myemph{function} if for all PPT distinguishers $D$, there exists a negligible function $\myemph{negl}$ such that:\fn{This corresponds to Definition 3.25 in (\cite{KatzLindell:IMC}, p.\ 79).}
+    %
+    \begin{equation}
+      \abs*[\Big]{\textup{Prob}\left[D^{F_k(\cdot)}(1^n) = 1\right] - \textup{Prob}\left[D^{f(\cdot)}(1^n) = 1\right]} \le  \myemph{negl}(n)
+    \end{equation}
+  \end{definition}
+  %
+  \noindent Note that $D$ cannot be given the key $k$\emd for the process of how $k$ indexes the subset of $\sgg{Func}_{n, m}$ from where $F_k$ is chosen is assumed to be known to $D$ (cf.\ Kerckhoff's principle). And thus, if he knew $k$, he could choose some random $x$ and compute himself $y = F_k(x)$. He then queries the oracle on $x$, obtaining answer $y'$. If he is interacting with $D^{F_k(\cdot)}$, then $y=y'$ with probability $1$, which would only happen with probability $2^{-m}$ otherwise.
+
+\section{PRNGs}
+  \label{sec:prng}
+  I will give a simplified\emd but still formally correct\emd proof of Theorem 3.18 (Katz and Lindell~\cite{KatzLindell:IMC}, p.\ 68)\emd which in the book is more complicated than what it needs to be. Recall the definition of the security game \privkeav (previous section). We want to construct a weaker version of the one-time pad, but one which is still secure in practice\emd which in our context, means secure according to definition~\ref{def:eav_secure}. The way we do this, is by replacing the (``true'') random string (of length at least equal to that of the plaintext message) used in the OTP, by a \emph{pseudorandom} string, which must also be of length at least that of the plaintext, but which can be generated from a much smaller amount of ``true'' randomness (the seed).
+
+  Formally, we use a \emph{pseudorandom number generator} (PRNG) $\funcdecl{G}{\{0, 1\}^n}{\{0, 1\}^{l(n)}}$, which expands a ``true'' random bit string of length $n$ into a pseudorandom string of length $l(n)$.\fn{We shall always assume that the polynomial $l$ \emph{expands} the string, because from a practical point of view, one is usually not interested in reducing the amount of randomness one has (i.e.\ reducing the length of a ``true'' random string).} Note that for an adversary with unbounded computational power, it is trivial to distinguish a uniform random string, from one that could have been output by $G$: just iterate over all the $2^n$ values of $\{0, 1\}^n$, and check whether the given string is or not in the range of $G$. However, such a strategy is out of reach for efficient adversaries. We want $G$ to be constructed in such a manner that, \emph{for all strategies that \textbf{any} efficient adversary can execute}, the output of $G$ ``looks the same'' as the output of choosing a string uniformly from $\{0, 1\}^{l(n)}$. We capture this intuition in the following definition:
+  %
+  \begin{definition}
+    \label{def:prng}
+    Let $l$ be a polynomial and let $G$ be a \emph{deterministic} polynomial-time algorithm such that, for any $n$ and for any $s\in \{0, 1\}^n$, $G(s)\in \{0, 1\}^{l(n)}$. We say that $G$ is a \emph{pseudorandom generator} if:\fn{This corresponds to Definition 3.14 given in (\cite{KatzLindell:IMC}, p.\ 62).}
+    %
+    \begin{enumerate}
+      \item \textbf{Expansion:} $\forall n, l(n) > n$.
+      \item \textbf{Pseudorandomness:} for any PPT algorithm $D$, there exists a negligible function $\myemph{negl}$ such that:
+        %
+        \begin{equation}
+          \abs*[\big]{\textup{Prob}_{s \leftarrow \{0, 1\}^{n}}\left[D(G(s)) = 1\right] - \textup{Prob}_{r \leftarrow \{0, 1\}^{l(n)}}\left[D(r) = 1\right]} \le \myemph{negl}(n)
+        \end{equation}
+        %
+        The first probability is taken over the randomness of $D$, and the uniform choice of $s\in \{0, 1\}^n$; the second over the randomness of $D$, and the uniform choice of $r\in \{0, 1\}^{l(n)}$.
+    \end{enumerate}
+  \end{definition}
+
+  \para{Note:} for the sake of clarity, a may at times indicate in a subscript from which set a given value is sampled, as in a definition above ($r \leftarrow \{0, 1\}^{l(n)}$ and $s \leftarrow \{0, 1\}^{n}$). But usually I will omit it.
+
+  We now arrive at the desired modification of the OTP, which aims to make it practical: given plaintext message $m$, encipher it has $\myemph{Enc}_k (m) = m \oplus G(k)$.\fn{Note that the shared key of this symmetric encryption scheme is used as the seed of the PRNG. This corresponds to Construction 3.17 given in (\cite{KatzLindell:IMC}, p.\ 67).} It is not known how to to prove that this construction\emd or any construction, for that matter\emd is unconditionally secure. What we can do, is argue in favour of the plausibility of the construction, assuming its underlying building blocks are secure. In the particular case of the construction above, we argue that it is secure, assuming the underlying pseudorandom generator, $G$, is secure. Katz and Lindell indeed do this (cf.~\cite{KatzLindell:IMC}, Theorem 3.18, p.\ 68), but in this case, there is a simpler\emd and perhaps more insightful\emd approach. We want to show that if $G$ is secure, then so is $\myemph{Enc}$. We do this showing that if $\myemph{Enc}$ is \emph{insecure}, then $G$ is also insecure.
+
+  More concretely, assume there exists an adversary $\mathcal{A}$ that breaks $\myemph{Enc}$ with probability $1/2 + p(n)$, with $p(n)$ being \textbf{non-negligible}. We use this adversary to construct a distinguisher $D$ that breaks $G$:
+  %
+  \begin{enumerate}
+    \item $D$ receives a string $w\in \{0, 1\}^{l(n)}$.
+    \item $D$ executes $\mathcal{A}$, and obtains $m_0, m_1\in \{0, 1\}^{l(n)}$.
+    \item $D$ chooses a uniform bit $b \leftarrow \in \{0, 1\}$, and obtains ciphertext $c = m \oplus G(k)$.
+    \item $D$ gives $c$ to $\mathcal{A}$, and obtains $b'$ from $\mathcal{A}$.
+    \item $D$ outputs $1$ if and only if $b' = b$, and outputs $0$ otherwise.
+  \end{enumerate}
+  %
+  Recall we say that $D$ \emph{succeeds} when it outputs $1$. It should be clear that if $w$ is a truly random string, $D$ succeeds with probability $1/2$, whereas if $w$ is a pseudorandom string (output by $G$), $D$ succeeds with probability $1/2 + p(n)$:
+  %
+  \begin{equation}
+    \textup{Prob}_{w \leftarrow \{0, 1\}^{l(n)}}\left[D(w) = 1\right] = \frac{1}{2}
+  \end{equation}
+  %
+  \begin{equation}
+    \textup{Prob}_{s \leftarrow \{0, 1\}^{n}}\left[D(G(s)) = 1\right] = \frac{1}{2} + p(n)
+  \end{equation}
+  %
+  We hence obtain:
+  %
+  \begin{align}
+    &\phantom{{}={}}\abs{\textup{Prob}_{w \leftarrow \{0, 1\}^{l(n)}}\left[D(w) = 1\right] - \textup{Prob}_{s \leftarrow \{0, 1\}^{n}}\left[D(G(s)) = 1\right]} \\
+    &= \abs{\frac{1}{2} - \parens{\frac{1}{2} + p(n)}} = p(n)
+  \end{align}
+  %
+  As $p(n)$ is non-negligible, we just broke the pseudorandom generator $G$ (cf.\ definition~\ref{def:prng}). Taking the contrapositive, we conclude that \emph{under the assumption that $G$ is a secure PRNG}, the encryption scheme outlined above is EAV-secure.\fn{For those less familiar with formal logic, the strategy we followed here amounts show that $a \rightarrow b$, by actually proving the equivalent condition (called the \emph{contrapositive}) $\neg b \rightarrow \neg a$.}
+
+  \vspace{1em}
+
+  \para{An alternative proof.} Instead of doing the contrapositive as above, we can consider an idealised version of the encryption scheme $\Pi$, which I will denote as $\widetilde{\Pi}$, which uses a message-length true random pad (instead of the pad generated by pseudorandom generator $G$).\fn{This means that in this case, our idealised construction $\widetilde{\Pi}$ coincides with the OTP.} Given a random string, any distinguisher (efficient or not) is correct with probability exactly $1/2$. This leads to the EAV-security condition for the OTP, namely that for any adversary (efficient or not), it succeeds in the \privkeav experiment with probability exactly $1/2$. Thus, we can fix a distinguisher $D$ constructed like above (and hence efficient), and a PPT (and hence efficient) adversary $\mathcal{A}$, for both of which it holds that:
+  %
+  \begin{equation}
+    \label{eq:dist_eav_otp}
+    \textup{Prob}_{w \leftarrow \{0, 1\}^{l(n)}}\left[D(w) = 1\right] = \textup{Prob}\left[\privkeavprime = 1\right] = \frac{1}{2}
+  \end{equation}
+  %
+  But due to the way $D$ is constructed, we also have:
+  %
+  \begin{equation}
+    \label{eq:dist_eav_prng}
+    \textup{Prob}_{s \leftarrow \{0, 1\}^{n}}\left[D(G(s)) = 1\right] = \textup{Prob}\left[\privkeav = 1\right]
+  \end{equation}
+  %
+  And if $G$ is a secure pseudorandom generator, then there must exist a negligible function $\myemph{negl}$ such that:
+  %
+  \begin{equation}
+    \label{eq:dist_sec_cond}
+    \abs*[\big]{\textup{Prob}\left[D(G(s)) = 1\right] - \textup{Prob}\left[D(w) = 1\right]} \le \myemph{negl}(n)
+  \end{equation}
+  %
+  Substituting \eqref{eq:dist_eav_otp} and \eqref{eq:dist_eav_prng} into \eqref{eq:dist_sec_cond}, we obtain:
+  %
+  \begin{align}
+    &\phantom{{}={}}\abs*[\big]{\textup{Prob}\left[D(G(s)) = 1\right] - \textup{Prob}\left[D(w) = 1\right]} \\
+    &=\abs{\textup{Prob}\left[\privkeav = 1\right] - \textup{Prob}\left[\privkeavprime = 1\right]} \\
+    &=\abs{\textup{Prob}\left[\privkeav = 1\right] - \frac{1}{2}} \le \myemph{negl}(n)
+  \end{align}
+  %
+  The last inequality implies that:
+  %
+  \begin{equation}
+    \textup{Prob}\left[\privkeav = 1\right] \le \frac{1}{2} + \myemph{negl}(n)
+  \end{equation}
+  %
+  As the adversary was arbitrary, this shows that the scheme $\Pi$ is EAV-secure.
+
+  \vspace{1em}
+
+  \noindent Both proofs are formally correct, and hence equivalent. But I hope that comparing one to the other helps convince you that reasoning about reductions in terms of the contrapositive can  yield a more enlightening argument.
+
+\section{Modes of Operation}
+  \label{sec:modes_of_operations}
+  \cite{KatzLindell:IMC}, \ts 3.6.2
+
+  \subsection{Cipher Block Chaining (CBC)}
+  \label{sec:cbc_mode}
+  foo
+
+  \subsection{Countermode (CTR)}
+  \label{sec:ctr_mode}
+  foo
+

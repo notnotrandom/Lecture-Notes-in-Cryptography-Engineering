@@ -1,0 +1,38 @@
+\documentclass[a4paper,12pt,dvipsnames*]{report}
+\input{inputs/report_preamble}
+
+\includeonly{chapters/SymmetricEnc/main}
+
+\title{
+Lecture Notes in Cryptography Engineering
+}
+\author{
+  {Óscar Pereira}\fn{\texttt{oscar@di.uminho.pt}.}
+}
+\date{\today}
+
+% --- END PREAMBLE ---
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\include{chapters/Intro/main}
+
+\include{chapters/SymmetricEnc/main}
+
+\include{chapters/MACs/main}
+
+\include{chapters/HashFunctions/main}
+
+\include{chapters/RSA/main}
+
+\newpage\phantomsection
+\addcontentsline{toc}{chapter}{References}
+\bibliographystyle{sane}
+\bibliography{sources}
+\end{document}
+
+% vim: spell spelllang=en

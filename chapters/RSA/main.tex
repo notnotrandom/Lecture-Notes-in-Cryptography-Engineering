@@ -1,0 +1,81 @@
+% mainfile: ../../report.tex
+% vim: spell spelllang=en
+
+\chapter{RSA}
+\label{cha:rsa}
+
+\section{The Chinese Remainder Theorem}
+  \label{sec:CRT}
+  Consider the following problem: given a family of integers $n_1, \dots, n_k$, all pairwise relatively prime, and another family of integers $a_1, \dots, a_k$, we want to find an integer $a$ such that $a \equiv a_i \pmod{n_i}$, for all $i$. The way we do this is by finding a family of numbers $e_1, \dots, e_k$, with the property that $e_i \equiv 1 \pmod{n_i}$, and $e_i \equiv 0 \pmod{n_j}$, for all $j\neq i$. Then it is straightforward to see that the number
+  %
+  \begin{equation}
+    a = \sum_{i} a_ie_i
+  \end{equation}
+  %
+  solves the set of linear congruences. Indeed, modulo $n_i$ we have:
+  %
+  \begin{equation}
+    a = a_ie_i + \sum_{j\neq i} a_je_j \equiv a_i1 + \sum_{j\neq i} a_j0 = a_i
+  \end{equation}
+  %
+  To construct the $e_i$, let $n = n_1n_2\dots n_k$. Then $e_i = (n/n_i)(n/n_i)^{-1}$, where $(n/n_i)^{-1}$ denotes the modular inverse of $n/n_i$, the modulus being $n_i$.\fn{\textbf{But note that you cannot reduce $n/n_i$ modulo $n_i$!!} Otherwise it will no longer be a multiple of all the other $n_j$, with $j\neq i$!} Note this inverse always exists, as $gcd(n/n_i, n_i) = 1$, due to the fact that all the $n_i$ are pairwise prime.
+
+  Now let $a' \equiv a \pmod{n}$. This means $n\divides (a-a')$, and as $n_i\divides n$, for all $i$, then also $n_i\divides (a-a')$, and thus $a' \equiv a \pmod{n_i}$. And finally, as we also have that $a \equiv a_i \pmod{n_i}$, we conclude that also $a' \equiv a_i \pmod{n_i}$, i.e.\ that $a'$ is also a solution to the set of congruences.\fn{Equivalence relations, such as congruences ($\equiv$), are \emph{transitive}: $a \equiv b$ and $b \equiv c$ implies $a \equiv c$.}
+
+  Conversely, suppose now that $a'$ is a solution to the set of congruences, i.e.\ that $a' \equiv a_i \pmod{n_i}$ for all $i$. As we also have that $a \equiv a_i \pmod{n_i}$, we conclude that $a' \equiv a \pmod{n_i}$, again for all $i$. This equivalent to saying that $n_i\divides (a-a')$; and as this holds for all $i$, then we must also have that $lcm(n_1, \dots, n_k)\divides (a-a')$. As $lcm(n_1, \dots, n_k) = n$, due to the $n_i$ being all pairwise relatively prime, we conclude that $n\divides (a-a')$, or equivalently, $a' \equiv a \pmod{n}$.
+
+  So to sum up, given a solution $a$ to the set of congruences, any other integer $a'$ is also a solution if and only if $a \equiv a' \pmod{n}$ (where $n = n_1n_2\dots n_k$).
+
+  \medskip
+
+  The CRT has a very neat interpretation in terms of residue classes~\cite[\ts 2.5]{Shoup:2009}. Indeed, suppose as above that $a$ is a solution to the CRT congruences. Then we just saw that any other element of the residue class $[a]_n$ of $\mathbb{Z}_n$ is also a solution.\fn{Recall that $[a]_n$ is composed of all integers $b$ such that $b \equiv a \pmod{n}$, and that $\mathbb{Z}_n$ is the set of all such class, viz.\ $[0]_n, [1]_n, \dots, [n-1]_n$.} Furthermore, consider any one of the $a_i$; as $a \equiv a_i \pmod{n_i}$, we see that $a$ belongs to the residue $[a_i]_{n_i}$, which thus coincides with the residue $[a]_{n_i}$. Hence the CRT be seen as a mapping from $\mathbb{Z}_{n}$ to $\mathbb{Z}_{n_1} \times \mathbb{Z}_{n_2} \times\dots\times \mathbb{Z}_{n_k}$, as follows:
+  %
+  \begin{equation}
+    [a]_n \mapsto ([a]_{n_1}\times [a]_{n_2} \times\dots\times [a]_{n_k})
+  \end{equation}
+  %
+  As any number congruent modulo $n$ with a solution to the CRT is also a solution, we see that the mapping is well-defined (i.e., it does not depend on the particular element of the residue class). The mapping is also a bijection, which we can show as follows. First, I will show it is injective: if there are two equal tuples, say $\prod [a]_{n_i}$ and $\prod [b]_{n_i}$, then $a \equiv b \pmod{n_i}$, for all $n_i$. But as shown above, this implies that $a \equiv b \pmod {n}$, or equivalently, $[a]_n = [b]_n$. Hence the mapping is injective. For surjectiveness, the CRT algorithm itself, as outlined above, shows that given any tuple of elements in the $\mathbb{Z}_{n_i}$, there exists a corresponding element in $\mathbb{Z}_n$. Thus the mapping is surjective\emd and hence, bijective.
+
+\section{RSA: A Gentle Introduction}
+  \label{sec:rsa_gentle_intro}
+  Pierre de Fermat's so-called little theorem tells us that for any integer $a$, and prime $p$, we have $a^p \equiv a \pmod{p}$. Now, if $a\not\equiv 0 \pmod{p}$, or equivalently, if $a$ is not a multiple of $p$ (symbolically, $p\nmid a$, read ``$p$ does not divide $a$''), the extended Euclidean Algorithm tells us that $a$ has a modular inverse modulo $p$\emd indeed, it shows us how to compute it. That is, there exists an integer $b$ such that $ab \equiv 1 \pmod{p}$. And so, if we multiply both sides of the first congruence above by $b$, we obtain $a^{p-1} \equiv 1 \pmod{p}$\emd valid for any $a$ that is \textbf{not} a multiple of $p$.
+
+  Now, as your favourite book on abstract algebra or number theory will happily explain to you, when the modulus is not prime, things get a bit more complicated. In particular, we have to use \emph{Euler's $\phi$ function}, also called the \emph{totient} function. For a positive integer $n$, $\phi(n)$ equals the number of integers $i$ such that $1 \le i < n$ and $gcd(i, n) = 1$. This allows to generalise Fermat's little theorem as follows:
+  %
+  \begin{theorem}[Euler's theorem]
+    \label{thm:euler_theorem}
+    If $a$ and $n$ are integers such that $n>0$ and $gcd(a, n) = 1$, then the following holds:
+    %
+    \begin{equation}
+      a^{\phi(n)} \equiv 1 \pmod{n}
+    \end{equation}
+  \end{theorem}
+  %
+  \begin{remark}
+    \label{rem:totient_for_prime}
+    If $n$ is prime, then $\phi(n) = n-1$ and we get back Fermat's (little) theorem.
+  \end{remark}
+
+  \medskip
+
+  \noindent Most books explain RSA with the totient, but we can simplify things somewhat.\fn{See Ferguson and Schneier (\cite{Ferguson:Schneier:PracC}, \ts 13).} This is because the modulus used in RSA, though not a prime, has the (relatively) simple form of a product of two primes: $n = pq$. Now, just as above, we are trying to find a value $t$ such that $x^t \equiv 1 \pmod{n}$, for almost all values of $x$. We already know we can set $t = \phi(n)$, in which case the condition holds for all $x$ relatively prime to $n$. But we can do better. For $x^t \equiv 1 \pmod{n}$ means that $n\divides (x^t-1)$, and as $n = pq$, this implies that $p\divides (x^t-1)$ and $q\divides (x^t-1)$\emd or equivalently, $x^t \equiv 1 \pmod{p}$ and $x^t \equiv 1 \pmod{q}$ respectively. Note that, as $p$ and $q$ are both primes, and hence also co-prime, we have $lcm(p,\ q) = pq = n$.\fn{$lcm$ stands for \emph{least common multiple}; $gcd$ for \emph{greatest common divisor}.} And so the \emph{converse} also holds: if $x^t \equiv 1 \pmod{p}$ and $x^t \equiv 1 \pmod{q}$, then also $x^t \equiv 1 \pmod{n}$.
+
+  Fermat's theorem shows that to have $x^t \equiv 1 \pmod{p}$, we must have $(p-1)\divides t$. And similarly, to have $x^t \equiv 1 \pmod{q}$, we must have $(q-1)\divides t$. The smallest $t$ for which this holds is $t = lcm(p-1,\ q-1)$, which you learned back in high school to compute as:
+  %
+  \begin{equation}
+    \label{eq:t_lcm}
+    lcm(p-1,\ q-1) = \frac{(p-1)(q-1)}{gcd(p-1,\ q-1)}
+  \end{equation}
+  %
+  So we set $t = lcm(p-1,\ q-1)$, for which $x^t\equiv 1 \pmod{n}$ holds\emd for \emph{almost} all values of $x$. Which values of $x$ should be excluded? Those for which either $x^t \equiv 1 \pmod{p}$ or $x^t \equiv 1 \pmod{q}$ fails to hold. Fermat's theorem says that these are the multiples of $p$ and $q$, and as here we are working with modulo $n$, we want those multiples that are between $0$ and $n-1$. So we have the multiples of $p$: $p, 2p, \dots, (q-1)p$\emd so we have $q-1$ multiples of $p$. For $q$, we have $q, 2q, \dots (p-1)q$\emd so $p-1$ multiples of $q$. And there is $0$ (multiple of all numbers), so in total we have $(q-1) + (p-1) + 1 = p+q-1$. For a large enough $n$, this is a very small fraction of the total number of values $0, \dots, n-1$.
+  %
+  \begin{remark}
+    \label{rem:n_pq_totient}
+    For $n=pq$, $\phi(n)$ is equal to the number of values from $1$ to $n-1$ (so $pq-1$ values), minus the number of multiples of either $p$ or $q$ in that range. As we are excluding the $0$, this is just $(q-1) + (p-1) = p +q - 2$. And so we have $\phi(n) = (pq - 1) - (p + q -2) = pq - p - q + 1 = (p-1)(q - 1)$. Comparing with \eqref{eq:t_lcm}, we see that $t\divides \phi(n)$, and so $x^{\phi(n)} \equiv 1\pmod{n}$ also holds.
+  \end{remark}
+
+  \medskip
+
+  \para{RSA.} This allows us to compute $e, d$ such that $ed \equiv 1 \pmod{t}$, which means that $ed$ can be written as $ed = tk + 1$, for some value of $k$. Thus, if we cipher a message $m$ as $m^e$, and decipher the cryptogram doing $(m^{e})^d$, we obtain $m^{ed} = m^{tk +1} = (m^t)^k m \equiv m\pmod{n}$.
+
+% chapter RSA (end)

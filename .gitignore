@@ -1,0 +1,16 @@
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+!*.bib
+!*.md
+!*.sh
+!*.tex
+
+# ...even if they are in subdirectories
+!*/
+
+# But do ignore the build dirs, and Unabridged.tex
+build*
+Unabridged*

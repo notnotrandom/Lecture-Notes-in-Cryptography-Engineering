@@ -1,0 +1,259 @@
+% mainfile: ../../report.tex
+% vim: spell spelllang=en
+
+\chapter{Message Authentication Codes}
+\label{cha:MAC}
+
+\section{Isn't secrecy enough?}
+  \label{sec:mac_vs_secrecy}
+  Alas, no. Firstly, because depending on the situation, the integrity of the message may be more important than its confidentiality. For example, if you are doing a bank transfer, you might not care if the entire world knows about it\emd but you want to be darn sure that neither the amount of the transfer, nor its intended recipient, are modified! However, in scenarios where confidentiality is in fact required, It is intuitive to think that if an adversary cannot extract any information from a ciphertext, then he is also unable to modify said ciphertext in a meaningful way. The road to cryptographic wisdom, however, is filled with failed intuitions. To take an extreme example, consider that even the perfectly secret OTP does \emph{not} provide integrity:\fn{The student will recall that in a earlier lecture, I showed that if the key is destroyed after begin used, one can make the claim that the key actually had such a value that makes the ciphertext decrypt to any message we choose. This is the dual of that situation: instead of modifying the key, we modify the ciphertext.}
+
+  \begin{figure}[!htb]
+    \centering
+    \renewcommand{\arraystretch}{1.2} % Increase row separation.
+    \begin{subfigure}{0.5\textwidth}
+      \centering
+      \begin{tabular}{c | c | c}
+        Plain & \verb+HEILHITLER+ \\
+        \hline
+        Key & \verb+WCLNBTDEFJ+ \\
+        \hline
+        Cipher & \verb+DGTYIBWPJA+
+      \end{tabular}
+      \captionsetup{width=0.95\linewidth}
+      \caption{Normal one-time pad usage.\vspace{1em}}\label{tab:otp_originally}
+    \end{subfigure}%
+    \begin{subfigure}{0.5\textwidth}
+      \centering
+      \begin{tabular}{c | c | c}
+        Plain & \verb+H+{\color{red}\verb+ANG+}\verb+HITLER+\\
+        \hline
+        Key & \texttt{WCLNBTDEFJ} \\
+        \hline
+        Cipher & \verb+D+{\color{red}\verb+CYT+}\verb+IBWPJA+\\
+      \end{tabular}
+      \captionsetup{width=0.95\linewidth}
+      \caption{But ciphertext modifications are impossible to detect.}\label{tab:otp_modified}
+    \end{subfigure}
+    \caption{Why the one-time pad offers no integrity guarantees.}\label{tab:otp_no_integrity}
+  \end{figure}
+  %
+  \noindent But it gets worse. In fact, even if, in addition to a cipher with an appropriate usage mode (which gives you confidentiality), you use a primitive for integrity\emd i.e.\ a \emph{message authentication code}, this chapter's topic\emd you can still end up with a construction that gets you neither of those goals. In fact, later in the chapter I will describe one such attack\emd the \emph{padding oracle} attack.
+
+\section{Definitions}
+  \label{sec:macs_definitions}
+  Before the definition, the idea: Alice wants to send message $m$ to Bob, and in order to protect the message's integrity, she will \emph{append} a tag $t$, which depends on both $m$ and the secret key $k$ she shares with Bob, and send both to Bob. On reception, Bob \emph{recomputes} the tag, and if the result is equal to the tag $t$ he received, then he accepts the message. Otherwise, he rejects it, and perhaps asks Alice to re-send it. Note that we are not trying to prevent an adversary from modifying the message; we are trying to prevent him from doing so \emph{undetected}. Let us formalise this intuition.
+  %
+  \begin{definition}
+    \label{def:mac}
+    A \emph{message authentication code}, (or \myemph{MAC} for short), consists of three PPT algorithms, $(\myemph{Gen}, \myemph{Mac}, \myemph{Vrfy})$, such that:
+    \begin{enumerate}
+      \item The key generation algorithm $\myemph{Gen}$ takes the security parameter $1^n$, and outputs a key $k$ with $\abs{k} \ge n$.
+      \item The tag generation algorithm $\myemph{Mac}$ takes as input the key $k$ and a message $m$ of arbitrary length (i.e.\ $m\in \{0, 1\}^*$) and outputs a tag $t$. This algorithm can be randomised, and hence it is denoted as $t \leftarrow \myemph{Mac}_k(m)$.
+      \item The deterministic verification algorithm, $\myemph{Vrfy}$, takes as input a key $k$, message $m$, and tag $t$. The output is one bit: $1$ if it considers the tag \myemph{valid}, and $0$ if it considers the tag \myemph{invalid}.
+    \end{enumerate}
+    %
+    The \emph{consistency condition} requires that for every key output by $\myemph{Gen}$, and every message in $\in \{0, 1\}^*$, it holds that $\myemph{Vrfy}_k(m, \myemph{Mac}_k(m)) = 1$.\fn{This corresponds to Definition 4.1 given in (\cite{KatzLindell:IMC}, p.\ 111).}
+  \end{definition}
+  
+  \para{Canonical verification.} In most practical algorithms, the verification step basically consists in recomputing the tag, and comparing it with what was received. This is called \emph{canonical verification}. (Note, in passing, that canonical verification implies that the \myemph{Mac} algorithm is deterministic.) Conceptually, however, it is important to separate the semantics of authenticating a message from that of verifying that a message is authentic. Hence we consider distinct algorithms for each task.
+
+  \bigskip
+
+  \para{Security of a MAC scheme.} The intuitive idea is that the adversary must not be able to produce a valid tag on any ``new'' message\emd meaning a message that was not previously authenticated by an honest party. As usual we shall consider only computationally bounded adversaries, however we allow him access to a \emph{MAC oracle}, $\myemph{Mac}_k(\cdot)$, that produces tags for messages of his choosing. This is done to model the fact that the adversary may be able to influence what messages get $\myemph{Mac}$'d\emd just as in some private encryption settings (CPA and CCA security), he was assumed to be able to influence what messages get encrypted. 
+
+  To lay these ideas down formally, consider the scheme $\Pi = (\myemph{Gen}, \myemph{Mac}, \myemph{Vrfy})$. We have the following experiment:
+
+  \bigskip
+
+  \textbf{Message Authentication Experiment} $\sg{Mac-Forge}{}{\mathcal{A}}{\Pi}(n)$:
+  %
+  \begin{enumerate}
+    \item Run $\myemph{Gen}(1^n)$ to generate a key $k$.
+    \item Adversary $\mathcal{A}$ is given $1^n$ and oracle access to $\myemph{Mac}_k(\cdot)$. Eventually $\mathcal{A}$ outputs $(m,t)$.
+    \item $\mathcal{A}$ \emph{succeeds} if and only if $\myemph{Vrfy}_k(m, t) = 1$, and $m\not\in \mathcal{Q}$, where $\mathcal{Q}$ is the set of messages on which the adversary queried the oracle. When this happens the output of the experiment is $1$; otherwise it is $0$.
+  \end{enumerate}
+  %
+  We consider a MAC secure if no efficient adversary can win the above game, except with negligible probability:
+  %
+  \begin{definition}
+    \label{def:mac_unforge}
+    A message authentication code $\Pi = (\myemph{Gen}, \myemph{Mac}, \myemph{Vrfy})$ is \emph{existentially unforgeable under an adaptative chosen-message attack}, if for all PPT adversaries $\mathcal{A}$, there is a negligible function \myemph{negl} such that:
+    %
+    \begin{equation}
+      \textup{Prob}\left[\sg{Mac-Forge}{}{A}{\Pi} (n) = 1\right] \le \myemph{negl}(n)
+    \end{equation}
+  \end{definition}
+  %
+  \noindent When things are clear from context, we just say the MAC is \emph{secure}.\fn{This corresponds to Definition 4.2 given in (\cite{KatzLindell:IMC}, p.\ 113).}
+  %
+  \begin{remark}
+    \label{rem:mac_replay}
+    Note that this definition, albeit considerably strong, does not rule out things like \emph{replay attacks}, where an adversary simply resends an already authenticated pair $(m, t)$, over and again. Nor does it rule out the opposite, i.e.\ a secure MAC does not prevent an active adversary of causing messages to ``disappear''. Or the possibility that messages get reordered. The reason is that when we design cryptographic primitives, we do so \emph{without making any assumption about the applications that will use them}. And whether replay attacks or disappearing or reordered messages are a problem or not, is a question that fits squarely within the semantics of the application where a MAC is being used.
+  \end{remark}
+  
+  \bigskip
+
+  \para{Strongly secure MAC.} Another thing that the adversary, in the above definition, is not precluded from doing, is taking an already authenticated message $m$, and compute \emph{another} valid tag for that message. That is, given $(m, t)$, compute $t'$ such that $\myemph{Vrfy}_k(m, t') = 1$. If adversary $\mathcal{A}$ is able to do this with MAC scheme $\Pi$, that still does \textbf{not} allow him to win the \sg{Mac-Forge}{}{A}{\Pi} security game, with probability better than negligible\emd and thus $\Pi$ is still considered secure, under that definition. In practice this not usually a concern\emd after all, if a message is already authenticated, computing a new valid tag just re-states that fact. There are, however exceptions\emd we will see an important one below, when discussing the \emph{encrypt-then-mac construction}\emd and to rule out this behaviour, we modify experiment \sgg{Mac-Forge} by changing $\mathcal{Q}$: instead of containing just a list of messages for which the adversary queried the oracle, it will also contain the \emph{tags} the oracle returned. That is, $(m, t)\in \mathcal{Q}$ if $\mathcal{A}$ queried the oracle on message $m$, and got tag $t$ as response. We denote this new experiment as \sgg{Mac-SForge}, and say that a MAC scheme as defined above is \textbf{strongly secure} if no efficient adversary wins this new experiment with more than negligible probability (this is nothing more than replacing experiment \sgg{Mac-Forge} with \sgg{Mac-SForge} in definition~\ref{def:mac_unforge}). In this new security game, if the adversary can request a tag for message $m$, and from the pair $(m, t)$ (where $t$ is the tag he got from the oracle), he can concoct another tag $t'$ for the same message $m$, then here he \textbf{is} allowed to submit $(m, t')$ as his forgery\emd as $(m, t)\in \mathcal{Q}$, but $(m, t')\not\in \mathcal{Q}$. If the verifier accepts this new tag, then he wins the game. So to say that no efficient adversary can win the \sgg{Mac-SForge} security game, with probability better than negligible, is effectively to rule out the possibility the adversary being able to produce new tags on previously authenticated messages.
+
+  \bigskip
+
+  \noindent Obviously, this new game \sgg{Mac-SForge} also rules out the possibility of the adversary discovering a tag a for a new message\emd that is, strong security implies (``regular'') security. The next theorem establishes a condition for the reverse to also hold.
+  %
+  \begin{theorem}
+    \label{thm:mac_strong_canonical}
+    Every secure MAC that uses canonical verification is strongly secure.
+  \end{theorem}
+  %
+  \begin{proof}
+    As stated above, canonical verification implies a deterministic \myemph{Mac} algorithm, which means that if $(m, t)$ is a valid pair, then for any $t'\neq t$, $(m, t')$ is an invalid pair (i.e.\ rejected by the verifier). Hence, to win the \sgg{Mac-SForge} game, the adversary must forge a tag on a new message\emd which is what he had to do to win the \sgg{Mac-Forge} game. The result now follows.
+  \end{proof}
+
+  \para{What about a verification oracle?} One can argue that a more ``natural'' way to model a MAC scheme is by also allowing the adversary, in addition to obtaining tags for messages of his choice, is also to \emph{verify} pairs $(m, t)$ of his choice. This can be easily done by adding a verification oracle $\myemph{Vrfy}_k(\cdot, \cdot)$ to experiments \sgg{Mac-Forge} and \sgg{Mac-Forge}. However, for canonical verification MACs (which includes all those used in practice), it turns out that $\myemph{Vrfy}_k(\cdot, \cdot)$ is basically useless. This is because given a pair $(m, t)$, the adversary either previously queried $m$ to $\myemph{Mac}_k(\cdot)$ (and thus knows the answer that $\myemph{Vrfy}_k(m, t)$ will give him), or didn't previously queried $m$ to $\myemph{Mac}_k(\cdot)$\emd and in this case he also knows, from the security of the MAC (strong or otherwise, no matter\fn{Remember both security notions are equivalent under canonical verification.}), that $\myemph{Vrfy}_k(m, t) = 0$, with overwhelming probability (only negligibly smaller than $1$).
+
+  \bigskip
+
+  \para{Timing attacks.}\fn{Timing attacks are one instance of what is generally known as \emph{side-channel attacks.} These work by trying to extract (secret) information from ``side-channels'': time measurements, power measurements, electromagnetic measurements, \dots} All the theory in the world will not help if when checking a MAC tag, you do it byte by byte, and\emd if the tag you compute is different from the one you got\emd \textbf{you output \myemph{invalid} as soon as you find that difference}. The reason is that an attacker can try all the 256 possibilities for the first byte of a random tag, and guess that the correct value is the one where it took longer for \myemph{invalid} to be output\emd because the next byte would then have had to be checked. And then do the same for that next byte, and so on. Thus if you have, say, a $16$-byte tag, you only need $256 \times 16 = 4096$ attempts, instead of $256^{16}$ attempts that an exhaustive search would require. For reference:
+  %
+  \begin{equation}
+    256^{16} = 340282366920938463463374607431768211456 \approx 3.4 \times 10^{38}
+  \end{equation}
+  %
+  In practice, even time differences of the order of milliseconds was enough to break security. So bottom line: \textbf{always check all the bytes of the tag, so it always takes the same time!}
+
+\section{Constructing MAC schemes}
+  \label{sec:mac_constructions}
+  If we restrict its input to messages of a fixed length, say $n$, then any pseudorandom function with input of size $n$ can be used as a MAC. The security of the MAC follows from the pseudorandomness of the function: it is impossible to guess the tag for a given (new) message with probability better than $2^{-n} \pm \myemph{negl}$. Note that in this case, the MAC is also strongly secure, for there is only one tag for any given message.
+
+  In this approach, however, the messages besides being limited to a fixed length, will also be very small, as the input length of practical pseudorandom functions is usually around a few hundred bits. Katz and Lindell~\cite{KatzLindell:IMC} give one elegant approach to overcome this length limitation\emd i.e.\ to perform \emph{domain extension} for (fixed length) MACs (\ts 4.3.2). But while elegant, that construction is also not very efficient.
+
+  A more promising approach might be to take the efficient constructions we do have for pseudorandom functions (in particular, block ciphers, but here I consider a generic pseudorandom function $F$), and try to turn them into an efficient MAC schemes. For example, we can tentatively define a CBCMAC scheme, based on the CBC mode of operation for block ciphers, as shown in figure~\ref{fig:cbcmac_fixed_length_msgs}. So we ignore the IV (or equivalently, set it to a block of zeroes), and do not output any intermediate ``ciphertext'' blocks, only the last one\emd and that will be our tag for message $m = m_0\|m_1\|m_2$. This scheme is secure as long as \textbf{all the messages are of fixed length}. The length itself is arbitrary, but it must be agreed beforehand by both sender and receiver. To get the intuition of what goes wrong if messages of different length are allowed, consider a message of length equal to the input size of $F_k$, call it $m_0$. The we obtain from the CBCMAC version depicted in figure~\ref{fig:cbcmac_fixed_length_msgs} is simply $t = F_k(m_0)$\emd in fact, this reduces to using the PRF $F$ as a MAC. But if we add another block $m_1 = m_0 \oplus t$, then we can compute, without needing the secret key $k$, the tag for the new message $m_0\|m_1$: in fact, it will be $t$ again! (Exercise: check this.\fn{Another exercise: produce a forgery for the example depicted in figure~\ref{fig:cbcmac_fixed_length_msgs}. Hint: you need another three blocks.})
+  %
+  \begin{figure}
+    \centering
+    \includegraphics[scale=2.0]{chapters/MACs/images/cbcmac/standalone.pdf}
+    \caption{CBCMAC for fixed length inputs. Modified from~\cite{Benoit:CBCMAC}.}
+    \label{fig:cbcmac_fixed_length_msgs}
+  \end{figure}
+
+  It turns out that the problem that breaks security of this scheme with messages of different lengths, is that they can share a \emph{common prefix}. There are two ways of solving this. One is instead of returning tag $t$ in figure~\ref{fig:cbcmac_fixed_length_msgs}, use another key $k'$, \textbf{chosen independently of $k$}, and return tag $\hat{t} = F_{k'}(t)$. But this requires generating another key, and as key generation is usually considered the ``slower part'', broadly speaking, of symmetric constructions, one usually prefers avoiding extra keys. So another approach is simply to modify the message to ensure that prefixes are impossible: this is achieved simply by prepending to message $m$, its length $\abs{m}$. That is, to calculate the tag for $m$, we run CBCMAC (now allowing for length variability) on message $\abs{m}\ \|\ m$. I stress that the length has to be \textbf{prepended}, that is, inserted at the beginning, otherwise prefixes could still occur. This latter strategy has the disadvantage of needing to know the length of the message when beginning to compute the MAC, but this is usually preferable to having to use a second key (but again, this depends on the concrete usage scenario.)
+
+\section{Authenticated Encryption}
+  \label{sec:authenc}
+  As the padding oracle attack described in the next section will show, it is a huge mistake to assume that just confidentiality is enough to prevent an adversary from getting to mischief. In fact, it is even worse than that: that attack showed that even using constructions for \textbf{both} confidentiality and integrity, if they are combined without due care, disaster can ensue.
+  
+  In more detail, let us try to define what we are trying to achieve. What are we trying to achieve? Well, we want a construction that gives us both confidentiality and integrity. Now, worrying about integrity makes no sense unless we consider an adversary that is capable of actually \emph{modifying} the data sent from one honest party to another. So, in what confidentiality is concerned, we want CCA-security (\ts\ref{sec:secdefs}). How should integrity fit into the mix? Well, we just replicate (actually, adapt) the existentially unforgeability experiment. 
+
+  \medskip
+
+  \textbf{Unforgeable Encryption Experiment} $\sg{Enc-Forge}{}{\mathcal{A}}{\Pi}(n)$:
+  %
+  \begin{enumerate}
+    \item Run $\myemph{Gen}(1^n)$ to generate a key $k$.
+    \item Adversary $\mathcal{A}$ is given $1^n$ and oracle access to $\myemph{Enc}_k(\cdot)$. Eventually $\mathcal{A}$ outputs a ciphertext $c$.
+    \item Let $m = \myemph{Dec}_k(c)$. $\mathcal{A}$ \emph{succeeds} if and only if $m \neq \bot$, and $m\not\in \mathcal{Q}$, where $\mathcal{Q}$ is the set of messages on which the adversary queried the oracle. When this happens the output of the experiment is $1$; otherwise it is $0$.
+  \end{enumerate}
+  %
+  Here we introduce a new behaviour for the decryption algorithm: it can \emph{refuse} to decrypt a ciphertext, instead outputting what can, for the purposes of the present text, be thought of as a ``rejection sign.'' It does not belong to the set of plaintext messages.
+  %
+  \begin{definition}
+    \label{def:enc_unforge}
+    An encryption scheme $\Pi = (\myemph{Gen}, \myemph{Enc}, \myemph{Dec})$ is \emph{unforgeable}, if for all PPT adversaries $\mathcal{A}$, there is a negligible function \myemph{negl} such that:
+    %
+    \begin{equation}
+      \textup{Prob}\left[\sg{Enc-Forge}{}{A}{\Pi} (n) = 1\right] \le \myemph{negl}(n)
+    \end{equation}
+  \end{definition}
+  %
+  \begin{remark}[No decryption oracle?]
+    \label{rem:enc_unforge_dec_oracle}
+    The attentive reader will have noticed that, even though we are trying to give definitions for CCA-resistant constructions, in the above experiment the adversary is not provided with a decryption oracle. It is possible to strengthen this model by adding one such oracle, but the given experiment is the classical way to define unforgeability (Katz and Yung~\cite{KatzYung:Unforge:CCA}). The intuition here is that if \emph{«any (new) ciphertexts generated by an adversary are likely to be invalid, the adversary cannot gain much by submitting them to the decryption oracle»} (ibid., \ts 3.2). If the decryption oracle gave some hint of a \emph{reason} for why the decryption failed, it could be argued that that information could help the adversary in producing a ciphertext that would decrypt correctly. But since the decryption oracle will almost always simply output $\bot$, it really does not help the adversary's task.
+  \end{remark}
+  %
+  Note that \sgg{Enc-Forge} does not imply CCA-security! In fact, considering the encrypt-then-mac construction (see below), with a MAC that is secure, but not strongly secure, is unforgeable. But as we will see, \textbf{it is not CCA-secure!}
+
+  Combining unforgeability and CCA security yields authenticated encryption:
+  %
+  \begin{definition}
+    \label{def:authenc_scheme}
+    A private-key encryption scheme that is unforgeable and CCA-secure is an \emph{authenticated encryption scheme}.\fn{This corresponds to Definition 4.17 in (\cite{KatzLindell:IMC}, p.\ 132).}
+  \end{definition}
+  %
+  \textbf{This is the property that we want our cipher+mac constructions to have!!}
+
+  \bigskip
+
+  \noindent We will see three approaches to combine a MAC and symmetric cipher, which I shall call encrypt-and-mac, mac-then-encrypt, and encrypt-then-mac. However, in practice, if you can, \textbf{you should not use any of those!} What you should do instead, is use modes like \texttt{AES-GCM} (AES in Galois Countermode), which provide you with both confidentiality and integrity, ``for free'', as it were. See \ts\ref{sec:authenc_aead}. We will study those three approaches, however, because from a security perspective, it is often as important\emd if not \emph{more} important\emd to know what you should \textit{not} do, as to know what you \textit{should} do.
+
+  % XXX code for gcm and poly
+
+  Before proceeding, however, I again remark what was said in \ts\ref{sec:on_keys}: in what follows, we always use \textbf{two independent keys}\emd I shall denote them $k_E$ for the key used in the encryption scheme, and $k_M$ for the key used in the MAC. To quote directly from Katz and Lindell, \emph{«different instances of cryptographic primitives should always use independent keys»} (\cite{KatzLindell:IMC}, p.\ 140).
+
+  \bigskip
+
+  \para{Encrypt-and-mac.} In this mode we encrypt message $m$, then compute the tag for message $m$, and send both: $\myemph{Enc}_{k_E}(m)\|\myemph{Mac}_{k_M}(m)$. \textbf{Avoid it at all costs.} The reason is that it is possible to have a secure MAC, that nonetheless produces a tag that is \emph{correlated} with the message. Which is precisely what the encryption of $m$ tries to avoid! So this defeats the purpose of encryption. But it gets worse. If the MAC used is deterministic, as are most of those used in practice, then seeing the same tag twice tells the adversary that the same message was sent twice (note that the tag is sent in the clear). So this mode may not achieve even CPA-security, and so is best avoided.
+
+  \smallskip
+
+  \para{Mac-then-encrypt.} In this mode, we first compute the MAC of the message, $t \leftarrow\myemph{Mac}_{k_M}(m)$, concatenate the message with it, and encrypt the bundle: $\myemph{Enc}_{k_E}(m\|t)$. This has intuitive appeal, as all the structure is hidden inside the ciphertext. However, this is only an illusion; in fact, the padding oracle applies to exactly this way of joining a block cipher with a MAC. Moreover, while this construction can be made secure, this is done imposing restrictions that go well beyond the cryptographic sphere, and into the design of the application: in particular, when decryption fails, it is required to hide the reason why it happened (invalid MAC or invalid pad; cf.~\ts\ref{sec:padding_oracle}). This may hinder the usability of the application, or make debugging harder, etc. In other words, it is not possible to analyse the security of this construction while abstracting away details of how it is (or will be) used. Hence, this approach is also best left unused.
+
+  \smallskip
+
+  \para{Encrypt-and-mac.} Here we first encrypt the plaintext, then compute the MAC of the resulting ciphertext. So we have the ciphertext, $c_m \leftarrow\myemph{Enc}_{k_E}(m)$, and then we compute the tag over it, $t \leftarrow\myemph{Mac}_{k_M}(c_m)$. And then we send both, i.e.\ the pair $c = (c_m, t)$.
+
+  \textit{Terminology: a word of warning.} The reader may have noticed that above, that the ciphertext resulting from encryption was denoted $c_m$. This is because, as will happen below in the analysis of security, when interacting with an encryption or decryption oracle that uses this construction, the output or input of that oracle\emd the pair $(c_m, t)$\emd \emph{will also be called ciphertext!} Usually this will not cause any trouble, as it will be easy to disambiguate from context\emd but the reader should be aware that this happens.
+
+  Going back to encrypt-then-mac, this mode is secure\emd meaning it provides authenticated encryption\emd \emph{if the MAC used is strongly secure}, and the cipher is \emph{\textbf{CPA}-secure}. To see why, let $c = (c_m, t)$ be a ciphertext that the adversary got from his encryption oracle. The ``regular'' security of the MAC implies that if he changes $c_m$, he cannot compute a valid tag for it\emd and so if he tries to decrypt that modified ciphertext the adversary will get $\bot$. This shows the scheme is unforgeable. To see that it is also CCA-secure, note that the strong security of the MAC makes decryption oracle in the CCA experiment useless: if the adversary makes a query with a ciphertext he got from the encryption oracle, he already knows the result; if he makes a query with any other ciphertext, the result will be an error ($\bot$). So CCA-security of the encrypt-then-mac scheme reduces to the CPA-security of the encryption scheme being used.
+
+  Observe that if the MAC scheme was secure, but not strongly secure, then:
+  %
+  \begin{itemize}
+    \item The scheme would still be unforgeable. For even if the adversary were able to produce a new tag for $c_m$, the decryption of $c_m$ (i.e.\ $m$), is an already observed plaintext\emd it was the plaintext the adversary sent to the encryption oracle to obtain $c = (c_m, t)$.
+    \item The scheme \emph{would no longer have CCA-security} (and so it would no longer be a authenticated encryption scheme). To see why this, let $c = (c_m, t)$ be the challenge ciphertext (cf.\ \ts\ref{sec:secdefs}). If the adversary can produce a new tag for $c_m$, then he obtains \emph{a new ciphertext} $c' = (c_m, t')$, \textbf{which can be submitted to the decryption oracle!} Thus he will know, with probability $1$, if $c$ is the encryption of $m_0$ or $m_1$\emd and so this completely destroys CCA-security.
+  \end{itemize}
+
+\section{Authenticated Encryption with Associated Data}
+  \label{sec:authenc_aead}
+  The previous section, combined with the padding oracle attack (next section), should suffice to convince you that whenever you need confidentiality, you should use a construction that also gives you integrity assurances.\fn{The converse is of course false. If you just need integrity, there is no need to bother with confidentiality, just use a MAC.} And as mentioned in the previous section, the recommended way to do that, is not to use any of the constructions studied therein, but to use a cipher that provides you \textbf{authenticated encryption with associated data (AEAD)}. That is, it provides you with confidentiality and integrity, ``for free''\emd meaning you do not have to do anything besides using said cipher. In fact, besides specifying the data to be encrypted, you can optionally specify additional data for which you just want integrity; i.e.\ additional data that gets sent in the clear, but for which the construction provides integrity guarantees.
+
+  Here I will briefly illustrate usage of the AESGCM construction (basic familiarity with the Python library \texttt{cryptography} is assumed).\fn{\url{https://cryptography.io}.} Encryption works as follows:
+
+  \begin{minted}{python}
+# Generate a random 96-bit IV.
+iv = os.urandom(12)
+# And a 256-bit key.
+key = os.urandom(32)
+
+encryptor = Cipher(algorithms.AES(key), modes.GCM(iv)).encryptor()
+
+# Associated_data, if any, will be authenticated but not encrypted.
+# It must also be passed in on decryption.
+if associated_data is not None and len(associated_data) > 0:
+  encryptor.authenticate_additional_data(associated_data)
+
+ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+
+return (iv, ciphertext, encryptor.tag)
+  \end{minted}
+
+  As for decryption, we have:
+  %
+  \begin{minted}{python}
+decryptor = Cipher(algorithms.AES(key), modes.GCM(iv, tag)).decryptor()
+
+# If it is not None, we put associated_data back in, or the
+# tag will fail to verify when we finalize the decryptor.
+if associated_data is not None and len(associated_data) > 0:
+  decryptor.authenticate_additional_data(associated_data)
+
+return decryptor.update(ciphertext) + decryptor.finalize()
+  \end{minted}
+  %
+  See the documentation for other AEAD possibilities, such as \texttt{ChaCha20Poly1305}.
+
+\section{Padding oracle}
+  \label{sec:padding_oracle}
+  To be completed. Described in \cite{KatzLindell:IMC}, \ts 3.7.2
+
+% chapter Message Authentication Codes (end)
+
