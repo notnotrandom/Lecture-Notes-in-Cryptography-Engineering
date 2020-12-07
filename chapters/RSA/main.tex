@@ -4,6 +4,8 @@
 \chapter{RSA}
 \label{cha:rsa}
 
+Note: if the reader is unfamiliar with modular arithmetic and/or group theory, he could do worse than to check chapters 3 (groups and subgroups) and 4 (cyclic groups) of Judson~\cite{Judson:AbstractAlgebra}\emd going back to chapter 2 when needed (integers and divisibility). It is available online at \url{http://abstract.ups.edu/}.
+
 \section{The Chinese Remainder Theorem}
   \label{sec:CRT}
   Consider the following problem: given a family of integers $n_1, \dots, n_k$, all pairwise relatively prime, and another family of integers $a_1, \dots, a_k$, we want to find an integer $a$ such that $a \equiv a_i \pmod{n_i}$, for all $i$. The way we do this is by finding a family of numbers $e_1, \dots, e_k$, with the property that $e_i \equiv 1 \pmod{n_i}$, and $e_i \equiv 0 \pmod{n_j}$, for all $j\neq i$. Then it is straightforward to see that the number
@@ -76,6 +78,6 @@
 
   \medskip
 
-  \para{RSA.} This allows us to compute $e, d$ such that $ed \equiv 1 \pmod{t}$, which means that $ed$ can be written as $ed = tk + 1$, for some value of $k$. Thus, if we cipher a message $m$ as $m^e$, and decipher the cryptogram doing $(m^{e})^d$, we obtain $m^{ed} = m^{tk +1} = (m^t)^k m \equiv m\pmod{n}$.
+  \para{RSA.} This allows us to compute $e, d$ such that $ed \equiv 1 \pmod{t}$, which means that $ed$ can be written as $ed = tk + 1$, for some value of $k$. Thus, if we encipher a message $m$ as $m^e$, and decipher the cryptogram doing $(m^{e})^d$, we obtain $m^{ed} = m^{tk +1} = (m^t)^k m \equiv m\pmod{n}$.
 
 % chapter RSA (end)
