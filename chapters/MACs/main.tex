@@ -253,7 +253,63 @@ return decryptor.update(ciphertext) + decryptor.finalize()
 
 \section{Padding oracle}
   \label{sec:padding_oracle}
-  To be completed. Described in \cite{KatzLindell:IMC}, \ts 3.7.2
+  Consider again CBC-encryption, using AES, for a three-block message $m = m_0\|m_1\|m_2$ (see figure~\ref{fig:cbc_padding_oracle}), and using the \textbf{mac-then-encrypt} construction.
+  %
+  \begin{figure}[hb!]
+    \centering
+    \includegraphics[scale=2.0]{chapters/MACs/images/cbc-aes/standalone}
+    \caption{CBC encryption, revisited.}
+    \label{fig:cbc_padding_oracle}
+  \end{figure}
+  %
+  That means that $m$ consists of a plaintext message $pt$, for which a (MAC) tag $t$ was computed, and the concatenation of both was padded to obtain a length multiple of the AES block size (16 bytes). That is, $m$ can also be written as $m = pt\|t\|pad$. The pad scheme is simply: if $p$ bytes are needed, then we use $p$ bytes each containing the value $p$ (written in binary). If the length of $pt\|t$ already is a multiple of the block size, then we use an extra block, containing the byte \texttt{0x16}, 16 times. Note that in figure~\ref{fig:cbc_padding_oracle}, the pad will be in $m_2$\emd but we can ignore this and aim for recovering any other block; here we will target $m_1$.
+
+  To that end, consider the \emph{leftmost} byte of both $m_1$ and $c_0$. We have (I am using Python-style array notation, where \texttt{[-1]} refers to the rightmost byte):
+  %
+  \begin{equation}
+    \label{eq:padding_oracle:1}
+    m_1\mathtt{[-1]} = c_0\mathtt{[-1]} \oplus \texttt{AES}_k^{-1}(c_1)\mathtt{[-1]}
+  \end{equation}
+  %
+  To recover the last byte of $m_1$, we simply discard all subsequent blocks (in this case it would be just $m_2$ and $c_2$), so that $m_1$ now becomes the last block. And we rewrite \eqref{eq:padding_oracle:1} as:
+  %
+  \begin{equation}
+    \label{eq:padding_oracle:2}
+    m_1\mathtt{[-1]} \oplus g \oplus \texttt{0x01} = c_0\mathtt{[-1]} \oplus g \oplus \texttt{0x01} \oplus \texttt{AES}_k^{-1}(c_1)\mathtt{[-1]}
+  \end{equation}
+  %
+  Mathematically, we just added $g \oplus \texttt{0x01}$ to both sides; but it terms of figure~\ref{fig:cbc_padding_oracle}, this means we replace the last (i.e.\ rightmost) byte of $c_0$, with that same value, XOR'd with $g \oplus \texttt{0x01}$. That is, we replace $c_0\mathtt{[-1]}$ with $c_0\mathtt{[-1]} \oplus g \oplus \texttt{0x01}$.
+
+  Now $g$ is simply a guess for the value of byte $m_1\mathtt{[-1]}$. To make the discussion more concrete, suppose that $m_1\mathtt{[-1]} = \mathtt{0xAF}$. If $g$ is different from this value, then the last byte of the decryption of our modified $c_0$ block will be:
+  %
+  \begin{equation}
+    \label{eq:padding_oracle:3}
+    \mathtt{0xAF} \oplus g \oplus \texttt{0x01}
+  \end{equation}
+  %
+  With overwhelming probability, this will not produce a valid pad (remember that $m_1$ is now the last block of the message). And as we are using mac-then-encrypt, in reverse, decryption happens first, and it is during decryption that the pad is checked\emd and if is invalid, it leads to a decryption error.\fn{Depending on the implementation, the error returned may be a more specific \emph{padding error}. But this is irrelevant, as long as it is different from a MAC error.} But consider what happens if $g = \mathtt{0xAF}$. If this is so, then \eqref{eq:padding_oracle:2} simply becomes:
+  %
+  \begin{equation}
+    \label{eq:padding_oracle:4}
+    \texttt{0x01} = c_0\mathtt{[-1]} \oplus \mathtt{0xAF} \oplus \texttt{0x01} \oplus \texttt{AES}_k^{-1}(c_1)\mathtt{[-1]}
+  \end{equation}
+  %
+  In other words, our modified $c_0$ decrypted to an $m_1$ block that ends with the byte \texttt{0x01}\emd \textbf{and this is a valid pad}. Which means that the receiver will move to the next step, verifying the MAC tag\emd which will fail, with overwhelming probability, as we just modified the plaintext. But it does not matter: the value of $g$ for which we get a MAC error, will be be the last byte of the \emph{original} $m_1$ plaintext block. Hence, we have recovered one byte of plaintext, at the cost of iterating $g$ for only the 256 possible values for a byte.
+
+  Now to recover the next byte of $m_1$, i.e.\ $m_1\mathtt{[-2]}$, we do the same trick, but using the pad \texttt{0x02 0x02}. As \texttt{0xAF $\oplus$ 0xAD = 0x02}, we replace $c_0\mathtt{[-1]}$ with $c_0\mathtt{[-1]} \oplus \mathtt{0xAD}$\emd this ensures that $m_1\mathtt{[-1]}$ will be \texttt{0x02} (cf.\ \eqref{eq:padding_oracle:1}). And rewrite \eqref{eq:padding_oracle:2} for $c_0\mathtt{[-2]}$ and $m_1\mathtt{[-2]}$:
+  %
+  \begin{equation}
+    \label{eq:padding_oracle:5}
+    m_1\mathtt{[-2]} \oplus g \oplus \texttt{0x02} = c_0\mathtt{[-2]} \oplus g \oplus \texttt{0x02} \oplus \texttt{AES}_k^{-1}(c_1)\mathtt{[-2]}
+  \end{equation}
+  %
+  And again, iterate over the 256 possible values of $g$, until the decryption/padding error turns into a MAC error, at which point we obtained another byte of $m_1$, namely $m_1\mathtt{[-2]}$. This strategy can be continued until all of $m_1$ has been recovered. And of course, this can be done blocks other than $m_1$\dots
+
+  \bigskip
+
+  \para{Mitigation.} One obvious way of mitigating this problem, is for the receiver to always return the same error, regardless of what happens. However, even this has to be implemented carefully: if the verification of the pad plus MAC tag is not made in \textbf{constant time}, this still leaves a padding oracle. Why? Because an error due to bad padding will systematically take less time to be returned, than an error due to a bad MAC. Cf.\ the remarks concerning \textbf{timing attacks}, made at the end of \ts\ref{sec:macs_definitions}, in particular the reduction from $256^{16}$ to merely $256\times 16$ attempts. They apply here verbatim.
+
+  Of course, the ideal strategy, when one is, e.g., designing the protocol from scratch, is to use an AEAD mode (\ts\ref{sec:authenc_aead}), such \texttt{AES-GCM} or \texttt{ChaCha20Poly1305}\emd but in practice, especially with systems that are already largely deployed, this might not be possible (usually in such scenarios, we have to keep changes to a minimum\dots).
 
 % chapter Message Authentication Codes (end)
 
