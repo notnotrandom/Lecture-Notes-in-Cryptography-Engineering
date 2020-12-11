@@ -334,13 +334,41 @@
 
 \section{Modes of Operation}
   \label{sec:modes_of_operations}
-  \cite{KatzLindell:IMC}, \ts 3.6.2
+  For now we will only cover modes of operation of \emph{block ciphers}. Hence, for the remainder of this section, assume we have a PRP $F_k$, that maps $n$ bits to $n$ bits. The constructions we will see below show how to apply it to input of arbitrary length.
+
+  \subsection{Electronic Code Book (ECB)}
+  \label{sec:cbc_mode}
+  This mode is presented merely for historical reasons, and because the practitioner of cryptography should be aware of it\emd \textbf{so it can be avoided like the plague}. Why? Because this mode of usage consists of simply chopping up the input into $n$-bit sized pieces, and applying $F_k$ to each of them (of course this requires padding, but the mode is so insecure that discussing this becomes irrelevant). The reason for its insecurity should be easy to see: it is a \emph{deterministic} scheme. I.e., ciphering the same message twice yields the same cryptogram, which means that at best, the scheme applied with a secure PRP can hope to be EAV-secure (and this is only if the size of the messages is restricted to the size of the block). But no matter how good the PRP, even MULT-security is not achievable.
 
   \subsection{Cipher Block Chaining (CBC)}
   \label{sec:cbc_mode}
-  foo
+  This mode aims to correct ECB's flaw of determinism. To this end, it makes use of a \emph{random Initialisation Vector} (IV). It is XOR'd with the first block of the message, prior to the call to $F_k$. This means that ciphering two messages with the same initial block, will \emph{not} cause the first block of the cryptogram to be equal. And this latter first block will then be XOR'd with the next block of the plaintext prior to $F_k$, and so on. See figure~\ref{fig:cbc_mode}.
+  %
+  \begin{figure}[h!]
+    \centering
+    \includegraphics[scale=2.0]{chapters/SymmetricEnc/images/cbc/standalone}
+    \caption{CBC encryption.}
+    \label{fig:cbc_mode}
+  \end{figure}
+  %
+  One difficulty of this mode, is that it is not easy to parallelise. I.e.\ to be able to compute ciphertext block $n$, one has to compute all previous ciphertext blocks. Another problem, is that as the IV is random, it has to be sent along with the message. If the message size is small, this can be a significant increase (e.g.\ if the message size is the size of the block, then the ciphertext will be twice the length of the plaintext). Another limitation is that the IV \emph{cannot be re-used}\emd otherwise CBC will leak information about the first block of the plaintext message. Lastly, note that with CBC, $F_k$ has to be a (pseudorandom) \emph{permutation}\emd because decryption requires that it be invertible. As we shall shortly see, this is not so with Countermode (CTR).
 
   \subsection{Countermode (CTR)}
   \label{sec:ctr_mode}
-  foo
+  Here, the idea is to use $F_k$ to produce a pseudorandom pad, to which the plaintext can then be simply XOR'd. For this reason, there is no need to pad the input. Furthermore, this method is highly efficient, not just due to its simplicity, but also because unlike CBC, it is very easy to parallelise. This is because to encrypt a given part of a message, one does not need to know the encryption of previous parts. See figure~\ref{fig:ctr_mode}.
+  %
+  \begin{figure}[hb!]
+    \centering
+    \includegraphics[scale=1.5]{chapters/SymmetricEnc/images/ctr/standalone}
+    \caption{CTR encryption (based on \cite{Maimut:CTR}).}
+    \label{fig:ctr_mode}
+  \end{figure}
+
+  \noindent Also unlike CBC, here $F_k$ does not need to be a \emph{permutation}, for we do not need to invert it for decryption (why?). So it suffices for $F_k$ to be a (possibly non-invertible) function\emd but obviously, \textbf{it still has to be pseudorandom!!}
+
+  In more detail, the way we generate a pseudorandom pad from $F_k$, is to take an unique nonce, and concatenate it with a counter. This guarantees that the input to $F_k$ never repeats itself\emd and hence, from the pseudorandomness of $F_k$ follows the pseudorandomness of the pad.
+
+  \medskip
+
+  \para{An important caveat.} In CBC, if by mistake the IV is re-used, that may leak some information, but only regarding the first block of the plaintext ($m_0$). In CTR, however, \textbf{reusing the nonce re-generates the same pad}\emd which leads to a much greater leakage than what would happen in CBC. So it is of paramount importance never to re-use the nonce. This begin said, in practice this is relatively easy to ensure, so today the preferred usage mode for block ciphers is CTR.\fn{Actually, as mentioned in several other places in the document, the preferred way to use block ciphers is to choose an AEAD mode (\ts\ref{sec:authenc_aead})\emd but if a block cipher mode must be used, CTR is the recommended choice.}
 

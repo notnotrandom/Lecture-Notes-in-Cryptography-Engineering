@@ -303,7 +303,7 @@ return decryptor.update(ciphertext) + decryptor.finalize()
     m_1\mathtt{[-2]} \oplus g \oplus \texttt{0x02} = c_0\mathtt{[-2]} \oplus g \oplus \texttt{0x02} \oplus \texttt{AES}_k^{-1}(c_1)\mathtt{[-2]}
   \end{equation}
   %
-  And again, iterate over the 256 possible values of $g$, until the decryption/padding error turns into a MAC error, at which point we obtained another byte of $m_1$, namely $m_1\mathtt{[-2]}$. This strategy can be continued until all of $m_1$ has been recovered. And of course, this can be done blocks other than $m_1$\dots
+  And again, iterate over the 256 possible values of $g$, until the decryption/padding error turns into a MAC error, at which point we obtained another byte of $m_1$, namely $m_1\mathtt{[-2]}$. This strategy can be continued until all of $m_1$ has been recovered. And of course, this can be done for blocks other than $m_1$\dots
 
   \bigskip
 
