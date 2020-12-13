@@ -256,8 +256,9 @@ PrivK\rlap{\textsuperscript{\raisebox{2pt}{eav}}}%
 % For Portuguese, replace "UKenglish" with "portuges".
 \usepackage[UKenglish]{babel}
 \usepackage[comma, numbers]{natbib}
-\renewcommand{\bibsection}{\chapter*{References}}  % name the bib chapter References.
-\usepackage{url}
+\renewcommand*{\bibsection}{\chapter*{References}}  % name the bib chapter References.
+\renewcommand*{\bibfont}{\footnotesize}
+\setlength{\bibsep}{0pt plus 0.5ex}
 % Make bib listing with <number><dot>.
 \makeatletter
 \renewcommand\@biblabel[1]{\textrm{#1.}}
