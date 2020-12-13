@@ -256,18 +256,17 @@
     \end{enumerate}
   \end{definition}
 
-  \para{Note:} for the sake of clarity, a may at times indicate in a subscript from which set a given value is sampled, as in a definition above ($r \leftarrow \{0, 1\}^{l(n)}$ and $s \leftarrow \{0, 1\}^{n}$). But usually I will omit it.
+  \para{Note:} for the sake of clarity, I may at times indicate in a subscript from which set a given value is sampled, as in a definition above ($r \leftarrow \{0, 1\}^{l(n)}$ and $s \leftarrow \{0, 1\}^{n}$). But usually I will omit it.
 
   We now arrive at the desired modification of the OTP, which aims to make it practical: given plaintext message $m$, encipher it has $\myemph{Enc}_k (m) = m \oplus G(k)$.\fn{Note that the shared key of this symmetric encryption scheme is used as the seed of the PRNG. This corresponds to Construction 3.17 given in (\cite{KatzLindell:IMC}, p.\ 67).} It is not known how to to prove that this construction\emd or any construction, for that matter\emd is unconditionally secure. What we can do, is argue in favour of the plausibility of the construction, assuming its underlying building blocks are secure. In the particular case of the construction above, we argue that it is secure, assuming the underlying pseudorandom generator, $G$, is secure. Katz and Lindell indeed do this (cf.~\cite{KatzLindell:IMC}, Theorem 3.18, p.\ 68), but in this case, there is a simpler\emd and perhaps more insightful\emd approach. We want to show that if $G$ is secure, then so is $\myemph{Enc}$. We do this showing that if $\myemph{Enc}$ is \emph{insecure}, then $G$ is also insecure.
 
-  More concretely, assume there exists an adversary $\mathcal{A}$ that breaks $\myemph{Enc}$ with probability $1/2 + p(n)$, with $p(n)$ being \textbf{non-negligible}. We use this adversary to construct a distinguisher $D$ that breaks $G$:
+  More concretely, assume there exists an adversary $\mathcal{A}$ that breaks $\myemph{Enc}$ with probability $1/2 + p(n)$, with $p(n)$ being \textbf{non-negligible}. That is, given two messages $m_0, m_1$, $\mathcal{A}$ can, just from the cryptogram, tell which message was enciphered (with probability $1/2 + p(n)$). And if it guessed correctly, it outputs $1$. We use this adversary to construct a distinguisher $D$ that breaks $G$:
   %
   \begin{enumerate}
     \item $D$ receives a string $w\in \{0, 1\}^{l(n)}$.
     \item $D$ executes $\mathcal{A}$, and obtains $m_0, m_1\in \{0, 1\}^{l(n)}$.
-    \item $D$ chooses a uniform bit $b \leftarrow \in \{0, 1\}$, and obtains ciphertext $c = m \oplus G(k)$.
-    \item $D$ gives $c$ to $\mathcal{A}$, and obtains $b'$ from $\mathcal{A}$.
-    \item $D$ outputs $1$ if and only if $b' = b$, and outputs $0$ otherwise.
+    \item $D$ constructs ciphertext $c = m \oplus w$.
+    \item $D$ gives $c$ to $\mathcal{A}$, obtains $b$ from $\mathcal{A}$, and outputs $b$.
   \end{enumerate}
   %
   Recall we say that $D$ \emph{succeeds} when it outputs $1$. It should be clear that if $w$ is a truly random string, $D$ succeeds with probability $1/2$, whereas if $w$ is a pseudorandom string (output by $G$), $D$ succeeds with probability $1/2 + p(n)$:
@@ -277,13 +276,13 @@
   \end{equation}
   %
   \begin{equation}
-    \textup{Prob}_{s \leftarrow \{0, 1\}^{n}}\left[D(G(s)) = 1\right] = \frac{1}{2} + p(n)
+    \textup{Prob}_{k \leftarrow \{0, 1\}^{n}}\left[D(G(k)) = 1\right] = \frac{1}{2} + p(n)
   \end{equation}
   %
   We hence obtain:
   %
   \begin{align}
-    &\phantom{{}={}}\abs{\textup{Prob}_{w \leftarrow \{0, 1\}^{l(n)}}\left[D(w) = 1\right] - \textup{Prob}_{s \leftarrow \{0, 1\}^{n}}\left[D(G(s)) = 1\right]} \\
+    &\phantom{{}={}}\abs{\textup{Prob}_{w \leftarrow \{0, 1\}^{l(n)}}\left[D(w) = 1\right] - \textup{Prob}_{k \leftarrow \{0, 1\}^{n}}\left[D(G(k)) = 1\right]} \\
     &= \abs{\frac{1}{2} - \parens{\frac{1}{2} + p(n)}} = p(n)
   \end{align}
   %
