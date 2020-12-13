@@ -269,7 +269,7 @@
     \item $D$ gives $c$ to $\mathcal{A}$, obtains $b$ from $\mathcal{A}$, and outputs $b$.
   \end{enumerate}
   %
-  Recall we say that $D$ \emph{succeeds} when it outputs $1$. It should be clear that if $w$ is a truly random string, $D$ succeeds with probability $1/2$, whereas if $w$ is a pseudorandom string (output by $G$), $D$ succeeds with probability $1/2 + p(n)$:
+  Recall we say that $D$ \emph{succeeds} when it outputs $1$. It should be clear that if $w$ is a truly random string, $D$ succeeds with probability $1/2$ (because \sgg{Enc} is exactly the OTP), whereas if $w$ is a pseudorandom string (output by $G$), $D$ succeeds with probability $1/2 + p(n)$:
   %
   \begin{equation}
     \textup{Prob}_{w \leftarrow \{0, 1\}^{l(n)}}\left[D(w) = 1\right] = \frac{1}{2}
