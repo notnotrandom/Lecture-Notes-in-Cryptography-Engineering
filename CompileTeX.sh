@@ -27,7 +27,7 @@ folders_to_be_rsyncd=( "chapters" )
 # IMPORTANT: set the temporary build dir here. Use a RAM-based temporary
 # filesystem if you have one. See README.
 tmp_build_dir="/run/user/$UID/xyz-temp-compile"
-###########################################
+##### END VARIABLES THAT THE USER CAN SET #####
 
 # Name of the .bib file (sans extension).
 sourcesname="sources"
@@ -61,7 +61,6 @@ function big_build_inner() {
   local fname="$1"
   local build_dir="$2"
 
-  local bibliography_was_actually_built="false"
   local undef_refs=""
 
   compile "$fname" "$build_dir"
@@ -118,7 +117,6 @@ function big_build_inner() {
       cd "${build_dir}" && pwd
       ${bibcmd} "${fname}.aux"
       if [[ $? -eq 0 ]]; then
-        bibliography_was_actually_built="true"
         cd ..
         compile "$fname" "$build_dir" && \
         compile "$fname" "$build_dir"
@@ -178,14 +176,11 @@ function big_build_inner() {
 # Do a big build on the regular copy; and if it succeeds, do the same for the
 # unabridged copy.
 function big_build () {
-# First, run compile(). If the main file has an \includeonly line, then we
+# Big build for regular copy: if the main file has an \includeonly line, then we
 # first create a temp copy of the whole dir, so as to remove that command (we
 # can't do this on the main file itself, because it will likely be open for
 # editing by the user). If the main file has no \includeonly line, then just do
-# a simple compile run.
-# The reason for this is that in order to build properly the bibliography and
-# other things, when using \includeonly, the first compile run must be on the
-# **whole document**.
+# a big build (done in function big_build_inner()).
   if [[ "$(do_we_have_includeonly)" == "true" ]]; then
     big_compile_on_tmp_folder_comment_include_only
   else
@@ -245,26 +240,22 @@ function clean() {
 # A normal (single) LaTeX compile.
 function compile() {
   ln -srf "$build_dir_unabridged"/"$name_unabridged".pyg "$build_dir_regular"
-
   ${texcmd} ${texcmdopts} --output-directory="$2" "$1"
   local ret=$?
 # Print a newline (SyncTeX, which runs at the end of the compilation process,
 # doesn't).
-  echo "" 
+  echo ""
   return $ret
 }
 
 # This function creates a copy of the main dir (excluding unabridged stuff),
-# deletes the \includeonly line in $name.tex, patches and then does a regular
-# compile run. The goal of this function is to rebuild the same auxiliary files
-# that would be produced by building the entire document. This is required when
-# running big_build() after clean(): if using \includeonly, then the first
-# compile run must be of the whole document. For precaution, I do that first
-# compile run the whole document always, irrespective of whether clean() was
-# called before.
+# deletes the \includeonly line in $name.tex, patches and then does a big
+# compile run. The reason is that there is little point in doing a big build
+# with \includeonly, because things like citations or backrefs may come out
+# wrong.
 #
-# It then waits for the big compile to finish, replaces the main folder's (../)
-# build dirs with these ones, and deletes the copy folder.
+# After the big build, it replaces the main folder's build dir with this one,
+# and deletes the copy folder.
 function big_compile_on_tmp_folder_comment_include_only() {
   local curr_dir=$(pwd)
 
@@ -276,8 +267,8 @@ function big_compile_on_tmp_folder_comment_include_only() {
 # Comment \includeonly line in $name.tex, if any.
   sed -e 's/^\s*\\includeonly.*$//' -i "${name}.tex"
 
-# We have to use our copy of build_dir_regular, because the compiler will not
-# use a build dir that is outside of the current dir.
+# We have to use our (tmp) copy of build_dir_regular, because the compiler will
+# not use a build dir that is outside of the current dir.
   big_build_inner "$name" "./$build_dir_regular"
   local ret=$?
 
@@ -464,10 +455,10 @@ main "$@"
 # compiling the regular copy, it just copies the pdf file---because in this
 # case, both regular and unabridged versions match.
 #
-# - big_build() runs compile() once, then build bibliography etc. (if
-# required), and then runs compile() a couple of times more. And then does the
-# same to the unabridged copy, if there exists one. This function is supposed
-# to be run when updating bibliographic references, indexes, etc.
+# - big_build() is the function supposed to be run when updating bibliographic
+# references, indexes, etc. It is tricky to run when also using \includeonly;
+# so it actually builds the entire document. See the comments therein for
+# further information.
 #
 # Most of the remaining functions revolve around these three, to compile both
 # the report and its unabridged version, and to check for errors and give
