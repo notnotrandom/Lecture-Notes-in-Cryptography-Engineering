@@ -44,6 +44,7 @@
 \usepackage{amstext}
 \usepackage{amsthm}
 \usepackage{bm}
+\usepackage{braket}
 \usepackage{calc}
 \usepackage[font=small,
             labelfont=bf]{caption} % Proper formatting for caption text.
@@ -52,7 +53,7 @@
 \usepackage{etoolbox}
 
 % Basically increase text width.
-\usepackage[top=2.5cm, bottom=2.5cm, left=3.5cm, right=3.5cm]{geometry}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
 
 % For graphics inclusion.
 \usepackage{graphicx}
@@ -86,6 +87,8 @@
 
 % For (mathematical) function declarations.
 \newcommand\funcdecl[3]{#1\colon #2 \rightarrow #3}
+
+\newcommand{\integers}{\mathbf{Z}}
 
 \newcommand{\myemph}[1]{{\text{\SchemataFont\small\upshape#1}}}
 
@@ -143,6 +146,15 @@ PrivK\rlap{\textsuperscript{\raisebox{2pt}{eav}}}%
 % \newcommand\SchemataFont{\renewcommand{\familydefault}{\sfdefault}}
 % \setmainfont[Mapping=tex-text, Color=textcolor]{SourceSansPro Light}
 
+\makeatletter
+\newtheorem*{rep@theorem}{\rep@title}
+\newcommand{\newreptheorem}[2]{%
+\newenvironment{rep#1}[1]{%
+\def\rep@title{#2 \ref*{##1}}%
+\begin{rep@theorem}}%
+{\end{rep@theorem}}}
+\makeatother
+
 \newtheorem{theorem}{Theorem}[chapter]
 \newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{lemma}[theorem]{Lemma}
@@ -152,14 +164,21 @@ PrivK\rlap{\textsuperscript{\raisebox{2pt}{eav}}}%
 \newtheorem{remark}[theorem]{Remark}
 \newtheorem{example}[theorem]{Example}
 
+\newreptheorem{theorem}{Theorem}
+\newreptheorem{lemma}{Lemma}
+\newreptheorem{definition}{Definition}
+
 % Ensures enumerations of theorems et al are similar.
 \AtBeginEnvironment{theorem}{%
   \setlist[enumerate]{label={\upshape(\roman*)}}}
 
 % To make emphasis in definitions et al. yield upright bold text.
 \AtBeginEnvironment{theorem}{\renewcommand\em{\upshape\bfseries}}
+\AtBeginEnvironment{reptheorem}{\renewcommand\em{\upshape\bfseries}}
 \AtBeginEnvironment{definition}{\renewcommand\em{\upshape\bfseries}}
+\AtBeginEnvironment{repdefinition}{\renewcommand\em{\upshape\bfseries}}
 \AtBeginEnvironment{lemma}{\renewcommand\em{\upshape\bfseries}}
+\AtBeginEnvironment{replemma}{\renewcommand\em{\upshape\bfseries}}
 \AtBeginEnvironment{corollary}{\renewcommand\em{\upshape\bfseries}}
 % \AtBeginEnvironment{remark}{\renewcommand\em{\upshape\bfseries}}
 

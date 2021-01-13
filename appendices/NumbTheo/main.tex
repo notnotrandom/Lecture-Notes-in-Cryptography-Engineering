@@ -1,0 +1,84 @@
+% mainfile: ../../report.tex
+% vim: spell spelllang=en
+
+\chapter{Preliminaries on Number Theory}
+\label{cha:prelim_nt}
+
+\section{Basics}
+  \label{sec:PNT:Basics}
+  One of the ways of the defining the \emph{greatest common divisor} is straightforward: given two integers $a$ and $b$, it is just the greatest of their non-negative common divisors. Given that $1$ is a common divisor of every number, the set of non-negative common divisors is always nonempty, and it's also finite, \emph{almost} always. The rub lies precisely in what happens when both numbers are $0$: for then every integer is a common divisor, and thus there is no ``greatest'' common divisor. But we can work around that case.
+  %
+  \begin{definition}
+    \label{def:gcd}
+    Given two integers, not simultaneously zero, $a$ and $b$, their \emph{greatest common divisor} (gcd) is the greatest non-negative integer $d$ such that it divides both $a$ and $b$. If $a = b = 0$, then we define $gcd(0, 0) = 0$.
+  \end{definition}
+  %
+  \noindent From this way of defining the gcd we get that $gcd(a, 0) = gcd(0, a) = \abs{a}$ holds for any integer $a$.
+  %
+  \begin{theorem}
+    \label{thm:gcd1}
+    Let $a$ and $b$ be two integers, and let $d = gcd(a, b)$. Then $d=xa+yb$, for some $x, y \in \mathbb{Z}$. Furthermore, every other common divisor of both $a$ and $b$, also divides $d$.
+  \end{theorem}
+  %
+  \begin{proof}
+    From the way we have defined the gcd, the result is obvious when either $a$ or $b$, or both, are $0$. So let us assume that neither is $0$. 
+
+    Consider the set $S=\set{r, s \in \mathbb{Z} | ar+bs \ge 1}$. This set is not empty (e.g.\ make $r=a$ and $s=b$); thus by the well-ordering principle, it contains a smallest element. Let $d=xa+by$ be that element. Dividing $a$ by $d$, we get $a = dq+r \Leftrightarrow a = (xa+by)q+r \Leftrightarrow r = a(1-xq) - byq$. Thus the remainder is also a linear combination of $a$ and $b$\emd which means that $r \in S$. But $r$ must be smaller than $d$, and $d$ is the smallest element of $S$, which means the remainder is zero (i.e. $d\divides a$). With $b$ a similar reasoning shows that $d\divides b$\emd and thus $d$ is a common divisor of both $a$ and $b$.
+
+    Given that any number that divides $a$ and $b$ must divide any linear combination of theirs, we conclude that any common divisor of $a$ and $b$ must also divide $d$. In particular this also shows that $d$ must be the \emph{greatest} common divisor\emd indeed if $d'$ were a common divisor that was greater than $d$, then we would have $d'\divides d$, which is a contradiction.\fn{In my view this already shows the gcd to be \emph{unique}, for no set of integers can contain two distinct greatest elements. However, the gcd's uniqueness can also be shown explicitly: let $d'$ now be another gcd. We would necessarily have $d\divides d'$ and $d'\divides d$, and as the gcd is always non-negative by definition, we conclude that $d=d'$.}
+  \end{proof}
+
+  \begin{remark}
+    \label{rem:eea}
+    Given integers $a, b$, both their gcd $d$, as well as the the integers $x, y$ that allows us to write $d = ax + by$, are found via the \emph{Extended Euclidean Algorithm}.
+  \end{remark}
+
+  \begin{corollary}
+    \label{cor:multiples_of_gcd}
+    An integer $r$ can be written as $r = as+bt$, if and only if $gcd(a,b)\divides r$.
+  \end{corollary}
+  %
+  \begin{proof}
+    As $gcd(a, b) = as + bt$ for some $s, t$, it is obvious that any multiple of the gcd can also be written as a linear combination of $a$ and $b$. Conversely, any linear combination of $a$ and $b$ is divisible by any common divisor of $a$ and $b$, and in particular by the gcd. 
+  \end{proof}
+  %
+  \begin{theorem}
+    \label{thm:relprime1}
+    If $a$ and $b$ are integers, then $gcd(a, b) = 1$ if and only if $xa + yb = 1$, for some integers $x$ and $y$.
+  \end{theorem}
+  %
+  \begin{proof}
+    If $gcd(a, b)=1$, then by theorem \ref{thm:gcd1}, $xa + yb = 1$, for some $x, y\in \mathbb{Z}$. Conversely if $xa + yb = 1$, then any common divisor of $a$ and $b$ must divide $1$, which implies that the only non-negative common divisor of $a$ and $b$ is $1$\emd and so $gcd(a, b) = 1$.
+  \end{proof}
+
+  \noindent The case where the gcd of two integers is $1$ is so important, it has its own name. It is of fundamental importance in algebra and number theory.
+  %
+  \begin{definition}
+    \label{def:rel_prime}
+    Two integers $a, b$ such that $gcd(a, b) = 1$ are said to be \emph{relatively prime}.
+  \end{definition}
+
+  \noindent The following result is needed in \ts\ref{sec:rsa_gentle_intro}.
+  
+  \begin{replemma}{lem:gcd_rel_prime_family}
+    Let $n_1, \dots, n_k$ be a family of integers, and let $n = \prod n_i$. Given an integer $a$, $gcd(a, n) = 1$ if and only if $gcd(a, n_i) = 1$, for $i = 1, \dots, k$.
+  \end{replemma}
+  %
+  \begin{proof}
+    ($\rightarrow$) If $gcd(a, n) = 1$, then $ax+ny = 1 \Leftrightarrow ax + \left( \prod n_i \right)y = 1$ from where we conclude that for each $i$ we can write $ax + n_iy' = 1$, which entails that $gcd(a, n_i) = 1$.
+
+    ($\leftarrow$) Let $ax_1 + n_1y_1 = 1$ and $ax_2 + n_2y_2 = 1$. Multiply one by the other; we obtain:
+    %
+    \begin{equation}
+      \label{eq:gcd_two_linear_combos_multiplication}
+      a^2x_1x_2 + ax_1n_2y_2 + n_1y_1ax_2 + n_1y_1n_2y_2 = ax' + n_1n_2y' = 1^2 = 1
+    \end{equation}
+    %
+    If we now have that $ax_3 + n_3y_3 = 1$, then multiplying member-wise by $ax' + n_1n_2y' = 1$ will yield $ax'' + n_1n_2n_3y'' = 1$. Now suppose that we have shown that $ar + (n_1n_2\dots n_j)s = 1$, for numbers $n_1, n_2, \dots$, up to $n_j$ (for some integers $r, s$). Now as $gcd(a, n_{j+1}) = 1$, there are $r', s'$ such that $ar' + n_{j+1}s' = 1$. Doing sidewise multiplication, as in~\eqref{eq:gcd_two_linear_combos_multiplication}, will now yield $ar'' + (n_1n_2\dots n_jn_{j+1})s'' = 1$, for some $r'', s''$, which, by induction, shows the result.
+  \end{proof}
+
+\section{Modular Arithmetic}
+  \label{sec:modular_arith}
+  An integer $a$ has an inverse modulo $n$ if and only if $gcd(a, n) = 1$. Indeed, if $gcd(a, n) = 1$, then we can write $ax + ny = 1$ (cf.\ theorem \ref{thm:gcd1})\emd and so, $x$ is the modular inverse of $a$, modulo $n$. Conversely, if $a$ has an inverse modulo $n$, say $x$, then this means that $ax \equiv 1 \pmod{n}$, or equivalently, $ax = 1 + kn$, for some integer $k$. Rewrite this as $ax + (-k)n = 1$, and from theorem \ref{thm:relprime1} we conclude that $gcd(a, n) = 1$.
+
+% chapter Preliminaries on Number Theory (end)

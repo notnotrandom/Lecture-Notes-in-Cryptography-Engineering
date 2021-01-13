@@ -78,6 +78,32 @@ Note: if the reader is unfamiliar with modular arithmetic and/or group theory, h
 
   \medskip
 
-  \para{RSA.} This allows us to compute $e, d$ such that $ed \equiv 1 \pmod{t}$, which means that $ed$ can be written as $ed = tk + 1$, for some value of $k$. Thus, if we encipher a message $m$ as $m^e$, and decipher the cryptogram doing $(m^{e})^d$, we obtain $m^{ed} = m^{tk +1} = (m^t)^k m \equiv m\pmod{n}$.
+  \para{RSA.} This allows us to compute $e, d$ such that $ed \equiv 1 \pmod{t}$, which means that $ed$ can be written as $ed = tk + 1$, for some value of $k$. Thus, if we encipher a message $m$ as $m^e \pmod{n}$, and decipher the cryptogram doing $(m^{e})^d \pmod{n}$, we obtain $m^{ed} = m^{tk +1} = (m^t)^k m \equiv m\pmod{n}$.\fn{This assumes that $m$ is already an element of $\integers_n$; see \ts\ref{sec:practical_rsa} for the problem of transforming an arbitrary message into a suitable integer.}
+
+  This is the gist of the RSA asymmetric encryption  algorithm. However, as presented, this algorithm\emd sometimes dubbed \emph{textbook RSA}\emd is \textbf{extremely unsafe}. If nothing else, it is \emph{deterministic}, which means it cannot even verify CPA security\emd let alone CCA. Addressing these shortcomings is the topic of section \ts\ref{sec:practical_rsa}. Before that, however, I will add a clarifying remark about whether to use $t$ as computed above, or $\phi(n)$.
+
+  Instead of computing $ed \equiv 1 \pmod{t}$, we could have computed $ed \equiv 1 \pmod{\phi(n)}$, and textbook RSA would still function: $m^{ed} = m^{\phi(n)k +1} = (m^{\phi(n)})^k m \equiv m\pmod{n}$. Moreover, the two versions are \emph{interchangeable}: one can, e.g., compute $ed \equiv 1 \pmod{t}$, encipher with $e$, but decipher using a $d'$ that verifies $ed' \equiv 1 \pmod{\phi(n)}$. This is because $e$ has an inverse modulo $t$ if and only if it has an inverse modulo $\phi(n)$. The backward direction is easy to see: $e$ has an inverse modulo $\phi(n)$ if and only if $gcd(e, \phi(n)) = 1$, and from this latter condition comes (via the extended Euclidean algorithm) $er + \phi(n)s = 1$, for some integers $r, s$. But as was seen above, $t\divides \phi(n)$, which means that we can write the previous equality as $er + (tf)s = 1$, for some integer $f$. This means that $gcd(e, t) = 1$, and thus $e$ also has an inverse modulo $t$. For the forward direction, we need the following lemma:
+  %
+  \begin{lemma}
+    \label{lem:gcd_rel_prime_family}
+    Let $n_1, \dots, n_k$ be a family of integers, and let $n = \prod n_i$. Given an integer $a$, $gcd(a, n) = 1$ if and only if $gcd(a, n_i) = 1$, for $i = 1, \dots, k$.
+    %
+  \end{lemma}
+  %
+  \para{Proof.} See the appendix (\ts\ref{sec:PNT:Basics}).
+
+  \smallskip
+
+  \noindent Going back to RSA, if $e$ has an inverse modulo $t$, then $gcd(e, t) = 1$. Now recall \eqref{eq:t_lcm}, and let $g = gcd(p-1, q-1)$. From above we have $t = lcm(p-1, q-1)$, and $\phi(n) = (p-1)(q-1)$. Hence we can write:
+  %
+  \begin{equation}
+    \phi(n) = t\times g
+  \end{equation}
+  %
+  Notice $t$ is a multiple of both $p-1$ and $q-1$, and $g$ is a divisor of both  $p-1$ and $q-1$\emd and hence, $g \divides t$.  From $gcd(e, t) = 1$ comes $1 = er + ts$, for some integers $r, s$. This combined with the fact that $t$ is a multiple of $g$ immediately gives that $gcd(e, g) = 1$. We can now apply lemma~\ref{lem:gcd_rel_prime_family} to conclude that $gcd(e, \phi(n)) = 1$, which entails that $e$ has an inverse modulo $\phi(n)$. And we are done.
+
+\section{RSA made practical}
+  \label{sec:practical_rsa}
+  tbd XXX
 
 % chapter RSA (end)

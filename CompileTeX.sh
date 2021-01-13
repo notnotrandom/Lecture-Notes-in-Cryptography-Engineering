@@ -22,7 +22,7 @@ finalname="LecturesCE"
 # named "chapters" and "frontmatter" (no quotes), then add them like this (WITH
 # quotes):
 # folders_to_be_rsyncd=( "chapters" "frontmatter" )
-folders_to_be_rsyncd=( "chapters" )
+folders_to_be_rsyncd=( "chapters" "appendices" )
 
 # IMPORTANT: set the temporary build dir here. Use a RAM-based temporary
 # filesystem if you have one. See README.
