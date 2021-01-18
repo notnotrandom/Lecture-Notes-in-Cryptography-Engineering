@@ -23,14 +23,14 @@
   \begin{proof}
     From the way we have defined the gcd, the result is obvious when either $a$ or $b$, or both, are $0$. So let us assume that neither is $0$. 
 
-    Consider the set $S=\set{r, s \in \mathbb{Z} | ar+bs \ge 1}$. This set is not empty (e.g.\ make $r=a$ and $s=b$); thus by the well-ordering principle, it contains a smallest element. Let $d=xa+by$ be that element. Dividing $a$ by $d$, we get $a = dq+r \Leftrightarrow a = (xa+by)q+r \Leftrightarrow r = a(1-xq) - byq$. Thus the remainder is also a linear combination of $a$ and $b$\emd which means that $r \in S$. But $r$ must be smaller than $d$, and $d$ is the smallest element of $S$, which means the remainder is zero (i.e. $d\divides a$). With $b$ a similar reasoning shows that $d\divides b$\emd and thus $d$ is a common divisor of both $a$ and $b$.
+    Consider the set $S=\set{r, s \in \mathbb{Z} | ar+bs \ge 1}$. This set is not empty (e.g.\ make $r=a$ and $s=b$); thus by the well-ordering principle, it contains a smallest element. Let $d=xa+by$ be that element. Dividing $a$ by $d$, we get $a = dq+r \Leftrightarrow a = (xa+by)q+r \Leftrightarrow r = a(1-xq) - byq$. Thus the remainder is also a linear combination of $a$ and $b$\emd which means that if $r > 0$, then $r \in S$. But $r$ must be smaller than $d$, and $d$ is, by assumption, supposed to be the smallest element of $S$\emd so $r$ cannot belong to $S$. Hence we conclude that $r = 0$ (i.e. $d\divides a$). With $b$ a similar reasoning shows that $d\divides b$\emd and thus $d$ is a common divisor of both $a$ and $b$.
 
     Given that any number that divides $a$ and $b$ must divide any linear combination of theirs, we conclude that any common divisor of $a$ and $b$ must also divide $d$. In particular this also shows that $d$ must be the \emph{greatest} common divisor\emd indeed if $d'$ were a common divisor that was greater than $d$, then we would have $d'\divides d$, which is a contradiction.\fn{In my view this already shows the gcd to be \emph{unique}, for no set of integers can contain two distinct greatest elements. However, the gcd's uniqueness can also be shown explicitly: let $d'$ now be another gcd. We would necessarily have $d\divides d'$ and $d'\divides d$, and as the gcd is always non-negative by definition, we conclude that $d=d'$.}
   \end{proof}
 
   \begin{remark}
     \label{rem:eea}
-    Given integers $a, b$, both their gcd $d$, as well as the the integers $x, y$ that allows us to write $d = ax + by$, are found via the \emph{Extended Euclidean Algorithm}.
+    Given integers $a, b$, both their gcd $d$, as well as the integers $x, y$ that allow us to write $d = ax + by$, are found via the \emph{Extended Euclidean Algorithm}.
   \end{remark}
 
   \begin{corollary}
