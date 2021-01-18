@@ -1,0 +1,102 @@
+\input{inputs/fonts}
+
+\input{inputs/style}
+
+%
+% Custom Packages.
+%
+
+% For graphics inclusion.
+\usepackage{graphicx}
+
+\usepackage{amsmath} % has to come before eulervm, or things bork!
+% Both amssymb and mathdesign defined \circledS, so just put this before
+% loading amssymb.
+\let\circledS\undefined 
+\usepackage{amssymb} % required (at least) for proof environ black square.
+\usepackage{amsthm} % required for proof environ (et al.).
+\usepackage{bm}
+\usepackage{braket}
+\usepackage{makeidx}
+% \makeindex
+\usepackage{mathtools} % required (at least) for proof environ black square.
+
+
+% -------------------------------------------------------
+% -------------------------------------------------------
+% ------------------- CUSTOM STUFF ----------------------
+% -------------------------------------------------------
+% -------------------------------------------------------
+
+% Use this space for custom things, other than \usepackage's. If the
+% customisations are lengthy, consider putting them into their own file, to be
+% \input'd. Such files should go in the inputs/ folder.
+
+\newcommand{\emd}{\textemdash}
+\newcommand{\fn}[1]{\footnote{#1}}
+\newcommand{\para}[1]{\noindent\textbf{#1}}
+\newcommand{\ts}{\textsection}
+
+\input{inputs/math}
+
+% Security game EAV-security.
+\newcommand{\privkeav}{{\text{\SchemataFont\small\upshape PrivK\rlap{\textsuperscript{\raisebox{2pt}{eav}}}\textsubscript{$\mathcal{A}$, $\Pi$}}}}
+\newcommand{\privkeavprime}{{\text{\SchemataFont\small\upshape%
+PrivK\rlap{\textsuperscript{\raisebox{2pt}{eav}}}%
+\textsubscript{$\mathcal{A}$, $\widetilde{\Pi}$}}}}
+
+\newlength{\widthsuperscript}
+\newlength{\widthsubscript}
+\newcommand{\sgg}[1]{{\text{\SchemataFont\small\upshape#1}}}
+\newcommand{\sg}[4]{{\text{%
+\setlength{\widthsuperscript}{\widthof{#2}}%
+\setlength{\widthsubscript}{\widthof{$\mathcal{#3}$, $#4$}}%
+\SchemataFont\small\upshape%
+\ifdim\widthsubscript>\widthsuperscript%
+#1\rlap{\textsuperscript{\raisebox{2pt}{#2}}}\textsubscript{$\mathcal{#3}$, $#4$}%
+\else%
+#1\rlap{\textsubscript{$\mathcal{#3}$, $#4$}}\textsuperscript{\raisebox{2pt}{#2}}%
+\fi%
+}}}
+
+% -------------------------------------------------------
+% -------------------------------------------------------
+% ------------------- END CUSTOM STUFF ------------------
+% -------------------------------------------------------
+% -------------------------------------------------------
+
+% Language and bibliography. Language with polyglossia must be set before
+% biblatex is used, or error ensues. But it's probably good advice with babel
+% and bibtex also.
+% For Portuguese, replace "UKenglish" with "portuges".
+\usepackage[UKenglish]{babel}
+\usepackage[comma, numbers]{natbib}
+\renewcommand*{\bibsection}{\chapter*{References}}  % Name the bib chapter References.
+\renewcommand*{\bibfont}{\footnotesize} % Use the same font size as in footnotes.
+\setlength{\bibsep}{0pt plus 0.5ex} % Smaller vertical separation between bibtems.
+
+% Make bib listing with <number><dot>.
+\makeatletter
+\renewcommand\@biblabel[1]{\textrm{#1.}}
+\makeatother
+% \renewcommand{\UrlFont}{\small\tt}
+
+% hyperref et al.
+% ***NOTA BENE:*** The hyperref package if used, MUST BE THE LAST ONE included!
+%
+\usepackage{xcolor} % For MidnightBlue colour!
+\providecolors{MidnightBlue}
+\usepackage[bookmarks=true,
+            citecolor=MidnightBlue,
+            colorlinks=true,
+            hyperfootnotes=false,
+            linkcolor=MidnightBlue,
+            linktocpage=true,
+            pagebackref=true,
+            urlcolor=MidnightBlue]{hyperref}
+\renewcommand*{\backref}[1]{}
+\renewcommand*{\backrefalt}[4]{%
+  \ifcase #1 Not cited.%
+    \or Cited on page~#2.%
+    \else Cited on pages~#2.%
+  \fi}

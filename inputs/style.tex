@@ -1,0 +1,77 @@
+% Style commands go here.
+\usepackage[outputdir=build]{minted}
+
+% Basically increase text width.
+% NOTA BENE: this has to come before header setup with fancyhdr!!
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+
+% To indicate current chapter name and number in the header.
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{#1}}
+\fancyhead[R]{}
+\fancyhead[L]{\chaptername\ \thechapter\ --\ \leftmark \hfill \thepage}
+
+% For fancy chapter header.
+\usepackage{titlesec, blindtext, color}
+\definecolor{gray75}{gray}{0.75}
+\newcommand{\hsp}{\hspace{20pt}}
+\titleformat{\chapter}[hang]{\Huge\bfseries}{\thechapter\hsp\textcolor{gray75}{|}\hsp}{0pt}{\Huge\bfseries}
+
+\usepackage[font=small,
+            labelfont=bf]{caption} % Proper formatting for caption text.
+
+% For making urls clickable.
+\usepackage{xurl}
+
+% Epigraph.
+\usepackage{epigraph}
+\usepackage{etoolbox}
+\newcommand{\mytextformat}{\epigraphsize\itshape}
+\newcommand{\mysourceformat}{\epigraphsize\scshape}
+\newenvironment{mytext}{\mytextformat}{}
+\newenvironment{mysource}{\mysourceformat\hfill}{}
+\renewcommand{\textflush}{flushleft} 
+\renewcommand{\sourceflush}{flushright}
+\newlength{\epitextlen}
+\newlength{\episourcelen}
+\newlength{\epilength}
+
+\let\originalepigraph\epigraph 
+
+% usage: \epigraph[<length>]{<quote>}{<author>}
+\renewcommand\epigraph[3][0.8]%
+{ %
+	\setlength{\epitextlen}{\widthof{\mytextformat#2}}%
+	\setlength{\episourcelen}{\widthof{\mysourceformat#3}}%
+	\ifdim\epitextlen>\episourcelen%
+		\setlength{\epilength}{\epitextlen}%
+	\else%
+		\setlength{\epilength}{\episourcelen}%
+	\fi%
+	% \wlog{\epitextlen}
+	% \wlog{\episourcelen}
+	\ifdim\epilength>#1\textwidth%
+		\setlength{\epilength}{#1\textwidth}%
+	\fi%
+	\setlength{\epigraphwidth}{\epilength}%
+	\originalepigraph{\mytextformat#2}{\mysourceformat#3}%
+}
+
+% For tables, side by side.
+\usepackage{subcaption}
+\captionsetup[subfigure]{labelformat=simple}
+\renewcommand\thesubfigure{(\alph{subfigure})}
+
+%
+% Number and symbol-less footnote. I use it to add the sources for quotes in the
+% chapter initial page.
+%
+\newcommand\fnnosym[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+
+\newcommand{\myemph}[1]{{\text{\SchemataFont\small\upshape#1}}}

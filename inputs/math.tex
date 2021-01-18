@@ -1,0 +1,105 @@
+\newcommand\divides{\ensuremath{\mathrel{|}}}
+
+% "Equal by definition" symbol.
+\newcommand\eqdef{\mathrel{\overset{\makebox[0pt]{%
+  \mbox{\normalfont\tiny\sffamily def}}}{=}}}
+
+\newcommand\funcdef[2]{#1 \mapsto #2}
+\newcommand\funcdecl[3]{#1\colon #2 \rightarrow #3}
+
+\newcommand{\integers}{\mathbf{Z}}
+
+\newcommand\st{\;\vert\;}
+
+\newcommand{\totient}{\ensuremath{\phi}}
+
+% If no newline after theorem et al environment, then no indentation either.
+% Requires etoolbox.
+\makeatletter
+\patchcmd{\@endtheorem}{\@endpefalse}{}{}{}
+\patchcmd{\endproof}{\@endpefalse}{}{}{}
+\makeatother
+
+% Make optional names for theorems et al bold, leaving the rest
+% unchanged (assuming amsthm is loaded). Don't know *why* this
+% works, but see:
+% https://tex.stackexchange.com/questions/43966/how-to-make-the-optional-title-of-a-theorem-bold-with-amsthm
+\makeatletter
+\def\th@plain{%
+  \thm@notefont{}% optional name font same as heading font
+  \itshape% body font
+}
+\makeatother
+
+% Make optional name in remark environment also bold. Cannot just copy first
+% line, works but spacing wrong. So just copy full definition; see: 
+% https://tex.stackexchange.com/questions/250035/transform-output-theoremstyleremark-from-italics-to-bold
+\makeatletter
+\def\th@remark{%
+  \thm@headfont{\bfseries}%
+  \thm@notefont{}% optional name font same as heading font
+  \normalfont % body font
+  \thm@preskip\topsep \divide\thm@preskip\tw@
+  \thm@postskip\thm@preskip
+}
+\makeatother
+
+\makeatletter
+\newtheorem*{rep@theorem}{\rep@title}
+\newcommand{\newreptheorem}[2]{%
+\newenvironment{rep#1}[1]{%
+\def\rep@title{#2 \ref*{##1}}%
+\begin{rep@theorem}}%
+{\end{rep@theorem}}}
+\makeatother
+
+% Math environments (all like theorem).
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition} % 'def' cannot be used as environ name.
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+
+\newreptheorem{theorem}{Theorem}
+\newreptheorem{lemma}{Lemma}
+\newreptheorem{definition}{Definition}
+
+% https://tex.stackexchange.com/questions/16453/denoting-the-end-of-example-remark#comment1002519_32394
+\newcommand{\addQEDstyle}[2]{%
+  \AtBeginEnvironment{#1}{\pushQED{\qed}\renewcommand{\qedsymbol}{#2}}%
+  \AtEndEnvironment{#1}{\popQED}}
+\addQEDstyle{remark}{$\triangle$}
+\addQEDstyle{example}{$\lozenge$}
+
+% Makes emphasis in definitions et al. yield upright bold text. Requires etoolbox.
+% remark is exempted because its default text is not italic -- so ok
+% to use italics for emphasis.
+\AtBeginEnvironment{theorem}{\renewcommand\em{\upshape\bfseries}}
+\AtBeginEnvironment{definition}{\renewcommand\em{\upshape\bfseries}}
+\AtBeginEnvironment{lemma}{\renewcommand\em{\upshape\bfseries}}
+\AtBeginEnvironment{corollary}{\renewcommand\em{\upshape\bfseries}}
+% \AtBeginEnvironment{remark}{\renewcommand\em{\upshape\bfseries}}
+
+% To get a black filled square at \end{proof}.
+\renewcommand\qedsymbol{$\blacksquare$}
+
+\newcommand\swapifbranches[3]{#1{#3}{#2}}
+\makeatletter
+\MHInternalSyntaxOn
+\patchcmd{\DeclarePairedDelimiter}{\@ifstar}{\swapifbranches\@ifstar}{}{}
+\MHInternalSyntaxOff
+\makeatother
+% https://tex.stackexchange.com/questions/94410/easily-change-behavior-of-declarepaireddelimiter
+
+% I can't believe these two are not default...:
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+\DeclarePairedDelimiter\parens{\lparen}{\rparen}
+\DeclarePairedDelimiter\sparens{\[}{\]}
+\DeclarePairedDelimiter\cparens{\{}{\}}
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\DeclarePairedDelimiter\norm{\lVert}{\rVert}
+
